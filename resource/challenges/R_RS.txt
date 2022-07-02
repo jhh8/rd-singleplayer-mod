@@ -1,0 +1,38 @@
+"CHALLENGE" {
+	"name"	"Ranked Relaxed Solo"
+	"description"	""
+
+	"convars" {
+		"asw_simple_hacking"				"1"
+		"asw_ai_computer_hacking_scale"		"10"
+		"asw_ai_button_hacking_scale"		"10"
+		//"rd_spawn_medkits" 				"31"
+		//"rd_spawn_ammo" 					"51"
+		"rd_techreq" 						"0"
+		"asw_marine_death_cam_slowdown" 	"0"
+		"rd_hackall" 						"1"
+		"rd_max_marines" 					"1"
+		"rd_weapon_requirement_override" 	"2"	// disables flamer requirement
+		
+		"asw_horde_override"							"0"
+		"asw_wanderer_override"							"0"
+		"rd_ready_mark_override"						"1"
+		"asw_sentry_friendly_fire_scale"				"1"
+		"asw_marine_ff_absorption"						"0"
+		//"asw_adjust_difficulty_by_number_of_marines" 	"0"
+		"asw_batch_interval" 							"3"
+		
+
+		"asw_marine_ff"						"2"
+		"asw_marine_ff_dmg_base"			"3"
+		"asw_marine_death_cam_slowdown"		"0" 
+		"asw_marine_death_protection"		"0"
+		"asw_marine_collision"				"1" 
+		"asw_marine_time_until_ignite"		"0"
+		"rd_marine_ignite_immediately"		"1" 
+		"asw_marine_burn_time_easy" 		"60"
+		"asw_marine_burn_time_normal" 		"60"
+		"asw_marine_burn_time_hard"			"60"
+		"asw_marine_burn_time_insane" 		"60" 
+	}
+}
