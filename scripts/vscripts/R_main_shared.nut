@@ -421,7 +421,7 @@ function OnGameEvent_player_say( params )
 						PrintToChat( "Alien kills = " + player_profile[1] );
 						PrintToChat( "Alien kills by melee = " + player_profile[2] );
 						PrintToChat( "Hours spent in mission = " + ( player_profile[3].tointeger() / 36000.0 ).tostring() );
-						PrintToChat( "Total kilometers ran = " + ( player_profile[4].tointeger() / 1000.0 ).tostring() );
+						PrintToChat( "Total kilometers ran = " + ( player_profile[4].tointeger() / 10000.0 ).tostring() );
 						PrintToChat( "Average meters ran per minute = " + ( 60 * ( ( 1.0 * player_profile[4].tointeger() ) / ( 1.0 * player_profile[3].tointeger() ) ) ).tostring() );
 						PrintToChat( "Fast reload fails = " + player_profile[5] );
 						PrintToChat( "Total times got top1 = " + player_profile[6] );
@@ -538,8 +538,6 @@ function UpdatePlayerData( iMissionComplete )
 	//player_profile[6] = ( player_profile[6].tointeger() + g_stat_count_top1 ).tostring();
 	//player_profile[7] = ( player_profile[7].tointeger() + g_stat_count_top2 ).tostring();
 	//player_profile[8] = ( player_profile[8].tointeger() + g_stat_count_top3 ).tostring();
-
-	//printl( "avg meters per minute = " + ( 60 * ( ( 1.0 * player_profile[3].tointeger() ) / ( 1.0 * player_profile[2].tointeger() ) ) ).tostring() )
 	
 	WriteFile( FILENAME_PLAYERPROFILE + "_general", player_profile, "|", 1, "" );
 
