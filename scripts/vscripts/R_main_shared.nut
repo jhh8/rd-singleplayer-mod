@@ -11,6 +11,20 @@
 
 */
 
+/*
+	player general profile looks like this:
+	
+	0: last version on which the player played
+	1: alien kill count
+	2: alien kill count by melee
+	3: deci-miliseconds spent in the mission
+	4: decimeters ran in total
+	5: fast reload fails
+	6: number of top1's
+	7: number of top2's
+	8: number of top3's
+*/
+
 g_hMarine <- null;
 g_hPlayer <- null;
 g_steam_id <- "";
@@ -25,38 +39,60 @@ g_bWRExists <- true;
 g_fWRTime <- 999999.0;
 
 g_bInvalidRun <- false;
+g_bCheckedMap <- false;		// make sure nothing breaks when map is completed in less than 0.5 seconds
+g_bNFNGLRun <- true;
+g_bNOHITRun <- true;
 g_bMissionComplete <- false;
 
-g_fStatCount <- 6;
+const g_fStatCount = 9;				// when adding more stats change this constant
+const g_Version = "1";
 g_stat_killcount <- 0;
-g_stat_reloadfail <- 0;
 g_stat_meleekills <- 0;
 g_stat_missiondecims <- 0;
 g_stat_distancetravelled <- 0;
+g_stat_reloadfail <- 0;
+g_stat_count_top1 <- 0;
+g_stat_count_top2 <- 0;
+g_stat_count_top3 <- 0;
 
 g_fTimeStart <- 0;
 g_vecPrevCoordinates <- Vector();
 
 const FILENAME_PLAYERLIST = "r_playerlist";
+FILENAME_PLAYERPROFILE <- "";
 FILENAME_MAPSINFO <- "";
 FILENAME_SPLITS <- "";
+g_tPlayerList <- {};	// player list table. index is steamid, value is player's name
+g_fTotalMapCount <- 0;
 
 function OnMissionStart()
 {
+	local player_list = CleanList( split( FileToString( FILENAME_PLAYERLIST ), "|" ) );
+	if ( player_list.len() != 0 )
+	{
+		for ( local i = 0; i < player_list.len(); i += 2 )
+		{
+			g_tPlayerList[ player_list[i+1] ] <- player_list[i];
+		}
+	}
+	
 	g_strPrefix <- Convars.GetStr( "rd_challenge" ) == "R_RS" ? "rs" : "hs";
+	
+	g_fTimeStart <- Time();
+
 	FILENAME_MAPSINFO <- "r_" + g_strPrefix + "_mapratings";
 	
 	GetCurrentMapInfo();
 }
 
 function OnGameplayStart()
-{
+{	
 	g_hMarine <- Entities.FindByClassname( null, "asw_marine" );
 	g_hPlayer <- g_hMarine.GetCommander();
 	g_steam_id <- g_hPlayer.GetNetworkIDString().slice( 10 );
-
-	g_fTimeStart <- Time() - 0.5;
 	
+	FILENAME_PLAYERPROFILE <- "r_" + g_strPrefix + "_profile_" + g_steam_id;
+
 	if ( g_strCurMap == "" )
 	{
 		PrintToChat( "Current map is not rated. This run will not count any stats" );
@@ -69,22 +105,20 @@ function OnGameplayStart()
 
 		InitializeSplits();
 	}
+
+	g_bCheckedMap <- true;
 }
 
 function GetCurrentMapInfo()
 {
-	local maps_info = split( FileToString( FILENAME_MAPSINFO ), "|" );
+	local maps_info = CleanList( split( FileToString( FILENAME_MAPSINFO ), "|" ) );
 
 	if ( maps_info.len() == 0 )
 		return;
 
 	maps_info.remove( 0 );	// remove the comment
-	maps_info.pop();
 
-	for ( local i = 0; i < maps_info.len(); ++i )
-	{
-		maps_info[i] = strip( maps_info[i] );
-	}
+	g_fTotalMapCount <- maps_info.len() / 4;
 
 	local cur_map = GetMapName().tolower();
 
@@ -122,6 +156,8 @@ function InitializeSplits()
 				// problems if two objectives get completed at same time
 				//::g_hCurrentObjective <- self;
 				//DoEntFire( "asw_challenge_thinker", "RunScriptCode", "OnObjectiveCompleted( g_hCurrentObjective )", 0, null, null );
+				
+				self.DisconnectOutput( "OnObjectiveComplete", "CallParentFunc" );
 			}
 
 			hObjective.ConnectOutput( "OnObjectiveComplete", "CallParentFunc" );
@@ -129,7 +165,7 @@ function InitializeSplits()
 	}
 
 	// extract splits
-	local splits_list = split( FileToString( FILENAME_SPLITS ), "|" );
+	local splits_list = CleanList( split( FileToString( FILENAME_SPLITS ), "|" ) );
 
 	if ( splits_list.len() == 0 )
 	{
@@ -137,11 +173,9 @@ function InitializeSplits()
 	}
 	else
 	{	
-		splits_list.pop();
-		
 		for ( local i = 0; i < splits_list.len(); i += 2  )
-		{
-			g_tWRObjectiveTimes[ strip( splits_list[i] ) ] <- strip( splits_list[i+1] );
+		{	
+			g_tWRObjectiveTimes[ splits_list[i] ] <- splits_list[i+1];
 		}
 
 		g_fWRTime <- g_tWRObjectiveTimes["finish"].tofloat();
@@ -186,7 +220,7 @@ function OnObjectiveCompleted( hObjective )
 
 	if ( time_difference > 0 )
 		color = 7;
-	if ( time_difference == 0 )
+	if ( time_difference < 0.01 && time_difference > -0.01 )
 		color = 1;
 
 	PrintToChat( (3).tochar() + "Pace to WR: " + color.tochar() + TimeToString( time_difference ) );
@@ -229,6 +263,33 @@ function Update()
 	return 0.2;
 }
 
+function OnTakeDamage_Alive_Any( victim, inflictor, attacker, weapon, damage, damageType, ammoName )
+{
+	if ( !victim || !g_bNOHITRun )
+		return damage;
+
+	if ( victim.GetClassname() == "asw_marine" )
+		g_bNOHITRun <- false;
+
+	return damage;
+}
+
+function OnGameEvent_weapon_fire( params )
+{
+	if ( !g_bNFNGLRun )
+		return;
+	
+	local hWeapon = EntIndexToHScript( params[ "weapon" ] );
+	
+	if ( !hWeapon )
+		return;
+
+	local weapon_class = hWeapon.GetClassname();
+
+	if ( weapon_class == "asw_weapon_grenade_launcher" || weapon_class == "asw_weapon_flamer"  )
+		g_bNFNGLRun <- false; 
+}
+
 function OnGameEvent_fast_reload_fail( params )
 {
 	if ( g_bInvalidRun )
@@ -253,16 +314,16 @@ function OnGameEvent_mission_success( params )
 	Update = null;
 	g_bMissionComplete <- true;
 
-	if ( g_bInvalidRun )
+	if ( g_bInvalidRun || !g_bCheckedMap )
 		return;
-	
+
 	UpdatePlayerData( 1 );
 
 	if ( Time() - g_fTimeStart < g_fWRTime )
 	{
 		if ( g_fWRTime > 900000 )
 		{
-			PrintToChat( (4).tochar() + g_hPlayer.GetPlayerName() + (3).tochar() + " is the first person to " + (4).tochar() + "beat" + (3).tochar() + "this map!" );	
+			PrintToChat( (4).tochar() + g_hPlayer.GetPlayerName() + (3).tochar() + " is the first person to " + (4).tochar() + "beat" + (3).tochar() + " this map!" );	
 		}
 		else
 		{
@@ -281,10 +342,128 @@ function OnGameEvent_mission_failed( params )
 {
 	Update = null;
 	
-	if ( g_bInvalidRun )
+	if ( g_bInvalidRun || !g_bCheckedMap )
 		return;
 	
 	UpdatePlayerData( 0 );
+}
+
+function OnGameEvent_player_say( params )
+{
+	local text = params["text"];
+	local argv = split( text, " " );
+	local argc = argv.len();
+
+	if ( argc < 2 )
+		return;
+
+	if ( argv[0] != "/r" )
+		return;
+
+	if ( argc == 2 )
+	{
+		switch( argv[1] )
+		{
+			case "help":
+			{
+				PrintToChat( "List of commands:" );
+				PrintToChat( "- /r profile <relaxed/hardcore> <name/steamid> <general/maps/nf+ngl/nohit>" );
+				PrintToChat( "- /r leaderboard <relaxed/hardcore> <mapname/nf+ngl/nohit>" );
+			}
+		}
+
+		return;
+	}
+
+	if ( argc == 5 )
+	{
+		switch( argv[1] )
+		{
+			case "profile":
+			{
+				local prefix = argv[2];
+				local prefix_short = "";
+				local steamid = argv[3];
+				local type = argv[4];
+
+				if ( prefix == "relaxed" ) prefix_short = "rs_";
+				if ( prefix == "hardcore" ) prefix_short = "hs_";
+
+				if ( prefix_short == "" )
+				{
+					PrintToChat( "Expected argument 2 to either be \"relaxed\" or \"hardcore\"" );
+					return;
+				}
+				
+				local player_profile = CleanList( split( FileToString( "r_" + prefix_short + "profile_" + steamid + "_" + type ), "|" ) );
+				if ( player_profile.len() == 0 )
+				{
+					if ( g_tPlayerList.rawin( steamid ) )	// rawget( "jhheight" ) == 108718913
+					{
+						player_profile = CleanList( split( FileToString( "r_" + prefix_short + "profile_" + g_tPlayerList.rawget( steamid ) + "_" + type ), "|" ) );
+						if ( player_profile.len() == 0 )
+						{
+							PrintToChat( "No such profile found" );
+							return;
+						}
+					}
+					else
+					{
+						PrintToChat( "No such profile found" );
+						return;
+					}
+				}
+				// yay we found a profile
+				if ( type == "general" )
+				{
+					if ( player_profile.len() == g_fStatCount )
+					{
+						PrintToChat( "Alien kills = " + player_profile[1] );
+						PrintToChat( "Alien kills by melee = " + player_profile[2] );
+						PrintToChat( "Hours spent in mission = " + ( player_profile[3].tointeger() / 36000.0 ).tostring() );
+						PrintToChat( "Total kilometers ran = " + ( player_profile[4].tointeger() / 1000.0 ).tostring() );
+						PrintToChat( "Average meters ran per minute = " + ( 60 * ( ( 1.0 * player_profile[4].tointeger() ) / ( 1.0 * player_profile[3].tointeger() ) ) ).tostring() );
+						PrintToChat( "Fast reload fails = " + player_profile[5] );
+						PrintToChat( "Total times got top1 = " + player_profile[6] );
+						PrintToChat( "Total times got top2 = " + player_profile[7] );
+						PrintToChat( "Total times got top3 = " + player_profile[8] );
+					}
+				}
+				else 
+				{
+					local strText = null;
+					if ( type == "maps" ) 	strText = player_profile.len().tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + " maps completed:";
+					if ( type == "nf+ngl" ) strText = player_profile.len().tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + " maps completed without flamer and grenade launcher:";
+					if ( type == "nohit" ) 	strText = player_profile.len().tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + " maps completed without getting hit:";
+
+					PrintToChat( strText );
+
+					for ( local i = 0; i < player_profile.len(); ++i )
+					{
+						PrintToChat( player_profile[i] );
+					}
+				}
+
+				return;
+			}
+		}
+	}
+
+}
+
+function CleanList( list )
+{
+	if ( list.len() == 0 )
+		return list;
+	
+	list.pop();	// pop the end of line
+	
+	for ( local i = 0; i < list.len(); ++i )
+	{
+		list[i] = strip( list[i] );
+	}
+
+	return list;
 }
 
 // writes r_playerlist and player's profile
@@ -293,17 +472,7 @@ function UpdatePlayerData( iMissionComplete )
 	if ( g_bInvalidRun )
 		return;
 	
-	local player_list = split( FileToString( FILENAME_PLAYERLIST ), "|" );
-	
-	if ( player_list.len() != 0 )
-	{
-		player_list.pop();
-		
-		for ( local i = 0; i < player_list.len(); i += 2 )
-		{
-			player_list[i] = strip( player_list[i] );
-		}
-	}
+	local player_list = CleanList( split( FileToString( FILENAME_PLAYERLIST ), "|" ) );
 	
 	local bFoundPlayer = false;
 	local bWasPlayerListChange = true;
@@ -341,54 +510,103 @@ function UpdatePlayerData( iMissionComplete )
 	
 	//---------------------------------------------------------------------------------------------------------------
 	
-	local player_profile = split( FileToString( "r_" + g_strPrefix + "_profile_" + g_steam_id ), "|" );
+	local player_profile = CleanList( split( FileToString( FILENAME_PLAYERPROFILE + "_general" ), "|" ) );
 	g_stat_missiondecims <- ( ( Time() - g_fTimeStart ) * 10 ).tointeger();
-	
+
 	if ( player_profile.len() == 0 )
 	{
-		for ( local i = 0; i < g_fStatCount; ++i )
+		player_profile.push( g_Version );
+		
+		for ( local i = 1; i < g_fStatCount; ++i )
 		{
 			player_profile.push( "0" );
 		}
 	}
-	else
-	{
-		player_profile.pop();
 
-		for ( local i = 0; i < g_fStatCount + player_profile[g_fStatCount - 1].tointeger(); ++i )
-		{
-			player_profile[i] = strip( player_profile[i] );
-		}
+	if ( player_profile[0].tointeger() != g_Version.tointeger() )
+	{
+		// change the mod version when adding more stats or changing something in the way its stored, which would require the information to be interpreted or written differently
+		// here we can identify when a player's profile has to undercome changes and do a stat fixup
 	}
 
-	player_profile[0] = ( player_profile[0].tointeger() + g_stat_killcount ).tostring();
-	player_profile[1] = ( player_profile[1].tointeger() + g_stat_meleekills ).tostring();
-	player_profile[2] = ( player_profile[2].tointeger() + g_stat_missiondecims ).tostring();
-	player_profile[3] = ( player_profile[3].tointeger() + UnitsToDecimeters( g_stat_distancetravelled ) ).tostring();
-	player_profile[4] = ( player_profile[4].tointeger() + g_stat_reloadfail ).tostring();
+	player_profile[0] = g_Version;
+	player_profile[1] = ( player_profile[1].tointeger() + g_stat_killcount ).tostring();
+	player_profile[2] = ( player_profile[2].tointeger() + g_stat_meleekills ).tostring();
+	player_profile[3] = ( player_profile[3].tointeger() + g_stat_missiondecims ).tostring();
+	player_profile[4] = ( player_profile[4].tointeger() + UnitsToDecimeters( g_stat_distancetravelled ) ).tostring();
+	player_profile[5] = ( player_profile[5].tointeger() + g_stat_reloadfail ).tostring();
+	//player_profile[6] = ( player_profile[6].tointeger() + g_stat_count_top1 ).tostring();
+	//player_profile[7] = ( player_profile[7].tointeger() + g_stat_count_top2 ).tostring();
+	//player_profile[8] = ( player_profile[8].tointeger() + g_stat_count_top3 ).tostring();
 
 	//printl( "avg meters per minute = " + ( 60 * ( ( 1.0 * player_profile[3].tointeger() ) / ( 1.0 * player_profile[2].tointeger() ) ) ).tostring() )
 	
+	WriteFile( FILENAME_PLAYERPROFILE + "_general", player_profile, "|", 1, "" );
+
 	if ( iMissionComplete )
 	{
-		local bNewMap = true;
-		for ( local i = g_fStatCount; i < g_fStatCount + player_profile[g_fStatCount - 1].tointeger(); ++i )
+		ManageMapStats( FILENAME_PLAYERPROFILE + "_maps", g_strCurMap );
+
+		if ( g_bNFNGLRun )
+			ManageMapStats( FILENAME_PLAYERPROFILE + "_nf+ngl", g_strCurMap );
+
+		if ( g_bNOHITRun )
+			ManageMapStats( FILENAME_PLAYERPROFILE + "_nohit", g_strCurMap );
+	}
+}
+
+function ManageMapStats( filename, mapname )
+{
+	local player_profile = CleanList( split( FileToString( filename ), "|" ) );
+	local bNewMap = true;
+	
+	if ( player_profile.len() > 0 )
+	{		
+		if ( IsNewMapInList( player_profile, mapname, 0, player_profile.len() ) )
 		{
-			if ( g_strCurMap == player_profile[i] )
-			{
-				bNewMap = false;
-				break;
-			}
+			player_profile.push( mapname );
 		}
-		
-		if ( bNewMap )
+		else
 		{
-			player_profile[g_fStatCount - 1] = ( player_profile[g_fStatCount - 1].tointeger() + 1 ).tostring();
-			player_profile.push( g_strCurMap );
+			bNewMap = false;
 		}
 	}
+	else
+	{
+		player_profile.push( mapname );
+	}
 
-	WriteFile( "r_" + g_strPrefix + "_profile_" + g_steam_id, player_profile, "|", 1, "" );
+	// sort the list and write
+	if ( bNewMap )
+	{
+		for ( local i = 0; i < player_profile.len() - 1; ++i )	// nubic selection sort
+		{
+			local mapname = player_profile[i];
+			
+			for ( local j = i + 1; j < player_profile.len(); ++j )
+			{
+				if ( mapname > player_profile[j] )
+				{
+					player_profile[i] = player_profile[j];
+					player_profile[j] = mapname;
+					mapname = player_profile[i];
+				}
+			}
+		}
+
+		WriteFile( filename, player_profile, "|", 1, "" );
+	}
+}
+
+function IsNewMapInList( list, mapname, read_beginning, read_end )
+{
+	for ( local i = read_beginning; i < read_end; ++i )
+	{
+		if ( mapname == list[i] )
+			return false;
+	}
+
+	return true;
 }
 
 function WriteFile( file_name, data, str_delimiter, data_per_line, compiled_string_initialize )
