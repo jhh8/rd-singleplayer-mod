@@ -22,7 +22,6 @@
 		//"asw_adjust_difficulty_by_number_of_marines" 	"0"
 		"asw_batch_interval" 							"3"
 		
-
 		"asw_marine_ff"						"2"
 		"asw_marine_ff_dmg_base"			"3"
 		"asw_marine_death_cam_slowdown"		"0" 
@@ -34,5 +33,10 @@
 		"asw_marine_burn_time_normal" 		"60"
 		"asw_marine_burn_time_hard"			"60"
 		"asw_marine_burn_time_insane" 		"60" 
+		
+		"rd_weapons_extra_allowed" 			"8"
+		"rd_weapons_extra_allowed_inverted" "1"
+		//"rd_weapons_extra_class_unrestricted" 	"11 17"						// NEED TO THINK ABOUT THIS
+		//"rd_weapons_regular_class_unrestricted" "1 2 3 6 11 15 22 24 26"	// NEED TO THINK ABOUT THIS
 	}
 }
