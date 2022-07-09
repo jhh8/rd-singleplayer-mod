@@ -1,3 +1,5 @@
+IncludeScript( "R_chatcolors.nut" );
+
 function CleanList( list )
 {
 	if ( list.len() == 0 )
@@ -69,9 +71,9 @@ function OnGameEvent_player_say( params )
 		{
 			case "help":
 			{
-				PrintToChat( "List of commands:" );
-				PrintToChat( "- /r profile <name/steamid> <relaxed/hardcore> <general/maps/nf+ngl/nohit>" );
-				PrintToChat( "- /r leaderboard <relaxed/hardcore> <mapname/nf+ngl/nohit>" );
+				PrintToChat( COLOR_BLUE + "List of commands:" );
+				PrintToChat( COLOR_GREEN + "- /r profile <name/steamid> <relaxed/hardcore> <general/maps/nf+ngl/nohit>" );
+				PrintToChat( COLOR_GREEN + "- /r leaderboard <relaxed/hardcore> <mapname/nf+ngl/nohit>" );
 			}
 		}
 
@@ -121,13 +123,13 @@ function OnGameEvent_player_say( params )
 
 					if ( array_leaderboard.len() == 0 )
 					{
-						PrintToChat( "No such leaderboard yet" );
+						PrintToChat( COLOR_RED + "No such leaderboard yet" );
 						return;
 					}
 
 					for ( local i = 0; i < array_leaderboard.len(); i += 2 )
 					{
-						PrintToChat( array_leaderboard[i] + " with " + array_leaderboard[i + 1].tostring() );
+						PrintToChat( COLOR_GREEN + array_leaderboard[i] + COLOR_BLUE + " with " + COLOR_GREEN + array_leaderboard[i + 1].tostring() );
 					}
 				}
 				else
@@ -170,13 +172,13 @@ function OnGameEvent_player_say( params )
 						player_profile = CleanList( split( FileToString( "r_" + prefix_short + "profile_" + g_tPlayerList.rawget( steamid ) + "_" + type ), "|" ) );
 						if ( player_profile.len() == 0 )
 						{
-							PrintToChat( "No such profile found" );
+							PrintToChat( COLOR_RED + "No such profile found" + COLOR_BLUE + "- player exists but profile doesnt" );
 							return;
 						}
 					}
 					else
 					{
-						PrintToChat( "No such profile found" );
+						PrintToChat( COLOR_RED + "No such profile found" + COLOR_BLUE + "- player doesnt exist" );
 						return;
 					}
 				}
@@ -185,15 +187,15 @@ function OnGameEvent_player_say( params )
 				{
 					if ( player_profile.len() == g_fStatCount )
 					{
-						PrintToChat( "Alien kills = " + player_profile[1] );
-						PrintToChat( "Alien kills by melee = " + player_profile[2] );
-						PrintToChat( "Hours spent in mission = " + ( player_profile[3].tointeger() / 36000.0 ).tostring() );
-						PrintToChat( "Total kilometers ran = " + ( player_profile[4].tointeger() / 10000.0 ).tostring() );
-						PrintToChat( "Average meters ran per minute = " + ( 60 * ( ( 1.0 * player_profile[4].tointeger() ) / ( 1.0 * player_profile[3].tointeger() ) ) ).tostring() );
-						PrintToChat( "Fast reload fails = " + player_profile[5] );
-						PrintToChat( "Total times got top1 = " + player_profile[6] );
-						PrintToChat( "Total times got top2 = " + player_profile[7] );
-						PrintToChat( "Total times got top3 = " + player_profile[8] );
+						PrintToChat( COLOR_BLUE + "Alien kills = " + COLOR_GREEN + player_profile[1] );
+						PrintToChat( COLOR_BLUE + "Alien kills by melee = " + COLOR_GREEN + player_profile[2] );
+						PrintToChat( COLOR_BLUE + "Hours spent in mission = " + COLOR_GREEN + ( player_profile[3].tointeger() / 36000.0 ).tostring() );
+						PrintToChat( COLOR_BLUE + "Total kilometers ran = " + COLOR_GREEN + ( player_profile[4].tointeger() / 10000.0 ).tostring() );
+						PrintToChat( COLOR_BLUE + "Average meters ran per minute = " + COLOR_GREEN + ( 60 * ( ( 1.0 * player_profile[4].tointeger() ) / ( 1.0 * player_profile[3].tointeger() ) ) ).tostring() );
+						PrintToChat( COLOR_BLUE + "Fast reload fails = " + COLOR_GREEN + player_profile[5] );
+						PrintToChat( COLOR_BLUE + "Total times got top1 = " + COLOR_GREEN + player_profile[6] );
+						PrintToChat( COLOR_BLUE + "Total times got top2 = " + COLOR_GREEN + player_profile[7] );
+						PrintToChat( COLOR_BLUE + "Total times got top3 = " + COLOR_GREEN + player_profile[8] );
 					}
 				}
 				else 
@@ -203,11 +205,11 @@ function OnGameEvent_player_say( params )
 					if ( type == "nf+ngl" ) strText = player_profile.len().tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + " maps completed without flamer and grenade launcher:";
 					if ( type == "nohit" ) 	strText = player_profile.len().tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + " maps completed without getting hit:";
 
-					PrintToChat( strText );
+					PrintToChat( COLOR_BLUE + strText );
 
 					for ( local i = 0; i < player_profile.len(); ++i )
 					{
-						PrintToChat( player_profile[i] );
+						PrintToChat( COLOR_GREEN + player_profile[i] );
 					}
 				}
 
