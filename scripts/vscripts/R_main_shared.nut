@@ -62,7 +62,7 @@ const FILENAME_PLAYERLIST = "r_playerlist";
 FILENAME_PLAYERPROFILE <- "";
 FILENAME_MAPSINFO <- "";
 FILENAME_SPLITS <- "";
-g_tPlayerList <- {};	// player list table. index is steamid, value is player's name
+g_tPlayerList <- {};	// player list table. index is player's name, value is steamid
 g_fTotalMapCount <- 0;
 
 function OnMissionStart()
@@ -349,7 +349,7 @@ function OnGameEvent_mission_failed( params )
 }
 
 function OnGameEvent_player_say( params )
-{
+{		
 	local text = params["text"];
 	local argv = split( text, " " );
 	local argc = argv.len();
@@ -367,7 +367,7 @@ function OnGameEvent_player_say( params )
 			case "help":
 			{
 				PrintToChat( "List of commands:" );
-				PrintToChat( "- /r profile <relaxed/hardcore> <name/steamid> <general/maps/nf+ngl/nohit>" );
+				PrintToChat( "- /r profile <name/steamid> <relaxed/hardcore> <general/maps/nf+ngl/nohit>" );
 				PrintToChat( "- /r leaderboard <relaxed/hardcore> <mapname/nf+ngl/nohit>" );
 			}
 		}
@@ -381,9 +381,9 @@ function OnGameEvent_player_say( params )
 		{
 			case "profile":
 			{
-				local prefix = argv[2];
+				local prefix = argv[3];
 				local prefix_short = "";
-				local steamid = argv[3];
+				local steamid = argv[2];
 				local type = argv[4];
 
 				if ( prefix == "relaxed" ) prefix_short = "rs_";
@@ -391,7 +391,7 @@ function OnGameEvent_player_say( params )
 
 				if ( prefix_short == "" )
 				{
-					PrintToChat( "Expected argument 2 to either be \"relaxed\" or \"hardcore\"" );
+					PrintToChat( "Expected argument 3 to either be \"relaxed\" or \"hardcore\"" );
 					return;
 				}
 				
