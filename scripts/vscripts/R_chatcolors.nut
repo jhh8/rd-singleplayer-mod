@@ -1,4 +1,4 @@
-const COLOR_YELLOW = (1).tochar();
-const COLOR_BLUE = (3).tochar();
-const COLOR_GREEN = (4).tochar();
-const COLOR_RED = (7).tochar();
+COLOR_YELLOW <- (1).tochar();
+COLOR_BLUE <- (3).tochar();
+COLOR_GREEN <- (4).tochar();
+COLOR_RED <- (7).tochar();
