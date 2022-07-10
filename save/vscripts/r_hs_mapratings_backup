@@ -70,6 +70,13 @@ naam1	|	rd_naam						|		0900		|		3		|
 sil1	|	asi_sil1_laboratory			|		1200		|		1		|
 sil2	|	asi_sil2					|		0900		|		3		|
 sil3	|	asi_sil4					|		0900		|		4		|
-acc1	|	rd-acc32_confacility_v1		|		0700		|		4		|
-acc2	|	rd-acc32_j5connector_v1		|		0900		|		4		|
-acc3	|	rd-acc32_labruins_v1		|		1200		|		1		|
+accw1	|	rd-acc32_confacility_v1		|		0700		|		4		|
+accw2	|	rd-acc32_j5connector_v1		|		0900		|		4		|
+accw3	|	rd-acc32_labruins_v1		|		1200		|		1		|
+acc1	|	rd-acc1_infodep				|		0900		|		4		|
+acc2	|	rd-acc2_powerhood			|		1000		|		2		|
+acc3	|	rd-acc3_rescenter			|		0900		|		6		|
+acc4	|	rd-acc4_confacility			|		0700		|		4		|
+acc5	|	rd-acc5_j5connector			|		0900		|		4		|
+acc6	|	rd-acc6_labruins			|		1200		|		1		|
+acc7	|	rd-acc_complex				|		1600		|		0		|
