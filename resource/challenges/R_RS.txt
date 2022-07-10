@@ -36,7 +36,7 @@
 		
 		"rd_weapons_extra_allowed" 			"8"
 		"rd_weapons_extra_allowed_inverted" "1"
-		//"rd_weapons_extra_class_unrestricted" 	"11 17"						// NEED TO THINK ABOUT THIS
-		//"rd_weapons_regular_class_unrestricted" "1 2 3 6 11 15 22 24 26"	// NEED TO THINK ABOUT THIS
+		"rd_weapons_extra_class_unrestricted" 	"11 17"
+		"rd_weapons_regular_class_unrestricted" "1 2 3 6 11 15 22 24 26"
 	}
 }
