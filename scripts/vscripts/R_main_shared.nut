@@ -1,6 +1,5 @@
 /*
 	left to do:
-- kabla proposed interesting idea about  a stat - how many times you had top1, top2, top3
 - admin commands and admin database
 - leaderboards and points calculator
 
@@ -22,6 +21,7 @@
 
 IncludeScript( "R_chatcolors.nut" );
 IncludeScript( "R_player_say.nut" );
+IncludeScript( "R_leaderboard_logic.nut" );
 
 g_hMarine <- null;
 g_hPlayer <- null;
@@ -49,9 +49,6 @@ g_stat_meleekills <- 0;
 g_stat_missiondecims <- 0;
 g_stat_distancetravelled <- 0;
 g_stat_reloadfail <- 0;
-g_stat_count_top1 <- 0;
-g_stat_count_top2 <- 0;
-g_stat_count_top3 <- 0;
 
 g_fTimeStart <- 0;
 g_vecPrevCoordinates <- Vector();
@@ -316,10 +313,24 @@ function OnGameEvent_mission_success( params )
 		return;
 	
 	local completion_time = TruncateFloat( Time() - g_fTimeStart, 3 );
-	
-	UpdatePlayerData( 1 );
+	local placements = BuildLeaderboard( g_strPrefix, g_strCurMap, g_iMapRating, g_iMapPrecision, false, [ g_steam_id, completion_time.tostring() ] );
+
+	UpdatePlayerData( 1, placements[1] );
 
 	PrintToChat( COLOR_YELLOW + "map " + COLOR_GREEN + g_strCurMap + COLOR_YELLOW + ", mode " + ( g_strPrefix == "hs" ? ( COLOR_RED + "hardcore:" ) : ( COLOR_GREEN + "relaxed:" ) ) );
+
+	if ( placements[0] != -1 )
+	{
+		if ( !placements[0] )
+			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has placed " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + " on their first run!" );
+		else if ( placements[1] < placements[0] )
+			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has improved by " + COLOR_GREEN + placements[2].tostring() + COLOR_BLUE + " seconds and advanced his placement from " + COLOR_GREEN + placements[0].tostring() + COLOR_BLUE + " to " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + "!" );
+	}
+	else
+	{
+		if ( placements[2] != -1 )
+			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has improved his record by " + COLOR_GREEN + placements[2].tostring() );
+	}
 
 	if ( completion_time < g_fWRTime )
 	{
@@ -357,7 +368,7 @@ function OnGameEvent_mission_failed( params )
 	if ( g_bInvalidRun || !g_bCheckedMap )
 		return;
 	
-	UpdatePlayerData( 0 );
+	UpdatePlayerData( 0, 0 );
 }
 
 function CleanList( list )
@@ -376,11 +387,11 @@ function CleanList( list )
 }
 
 // writes r_playerlist and player's profile
-function UpdatePlayerData( iMissionComplete )
+function UpdatePlayerData( iMissionComplete, new_placement )
 {
 	if ( g_bInvalidRun )
 		return;
-	
+
 	local player_list = CleanList( split( FileToString( FILENAME_PLAYERLIST ), "|" ) );
 	
 	local bFoundPlayer = false;
@@ -444,10 +455,11 @@ function UpdatePlayerData( iMissionComplete )
 	player_profile[3] = ( player_profile[3].tointeger() + g_stat_missiondecims ).tostring();
 	player_profile[4] = ( player_profile[4].tointeger() + UnitsToDecimeters( g_stat_distancetravelled ) ).tostring();
 	player_profile[5] = ( player_profile[5].tointeger() + g_stat_reloadfail ).tostring();
-	//player_profile[6] = ( player_profile[6].tointeger() + g_stat_count_top1 ).tostring();
-	//player_profile[7] = ( player_profile[7].tointeger() + g_stat_count_top2 ).tostring();
-	//player_profile[8] = ( player_profile[8].tointeger() + g_stat_count_top3 ).tostring();
 	
+	if ( new_placement == 1 ) player_profile[6] = ( player_profile[6].tointeger() + 1 ).tostring();
+	if ( new_placement == 2 ) player_profile[7] = ( player_profile[7].tointeger() + 1 ).tostring();
+	if ( new_placement == 3 ) player_profile[8] = ( player_profile[8].tointeger() + 1 ).tostring();
+
 	WriteFile( FILENAME_PLAYERPROFILE + "_general", player_profile, "|", 1, "" );
 
 	if ( iMissionComplete )
@@ -602,4 +614,9 @@ function str( parameter )
 function PrintToChat( str_message )
 {
 	ClientPrint( null, 3, str_message );
+}
+
+function GetPlayerSteamID()
+{
+	return g_steam_id;
 }
