@@ -1,6 +1,67 @@
 // note: problems on map lana3, that map decides the hacks by random spawns
-DoEntFire( "asw_spawner", "AddOutput", "MinSkillLevel 0", 0, null, null );
-DoEntFire( "asw_spawner", "AddOutput", "MaxSkillLevel 5", 0, null, null );
+//DoEntFire( "asw_spawner", "AddOutput", "MinSkillLevel 0", 0, null, null );
+//DoEntFire( "asw_spawner", "AddOutput", "MaxSkillLevel 5", 0, null, null );
+
+// if youre a random code reader and find flaws with this spawner difficulty logic then please rewrite it for me, im tired of this
+local cur_difficulty = Convars.GetFloat( "asw_skill" );
+
+if ( cur_difficulty == 4 )
+{
+	local hSpawner = null;
+	while ( hSpawner = Entities.FindByClassname( hSpawner, "asw_spawner" ) )
+	{
+		local min = NetProps.GetPropInt( hSpawner, "m_iMinSkillLevel" );
+		if ( !min )
+			min = 1;
+			
+		local max = NetProps.GetPropInt( hSpawner, "m_iMaxSkillLevel" );
+		if ( !max )
+			max = 5;
+		
+		if ( min == 5 && max == 5 )
+		{
+			NetProps.SetPropInt( hSpawner, "m_iMinSkillLevel", 1 );
+			NetProps.SetPropInt( hSpawner, "m_iMaxSkillLevel", 5 );
+		}
+	}
+}
+
+if ( cur_difficulty <= 3 )
+{
+	local hSpawner = null;
+	while ( hSpawner = Entities.FindByClassname( hSpawner, "asw_spawner" ) )
+	{
+		local min = NetProps.GetPropInt( hSpawner, "m_iMinSkillLevel" );
+		if ( !min )
+			min = 1;
+			
+		local max = NetProps.GetPropInt( hSpawner, "m_iMaxSkillLevel" );
+		if ( !max )
+			max = 5;
+		
+		if ( max < min )
+			continue;
+		
+		// spawner only spawns on ins/brut, turn it on
+		if ( min >= 4 )
+		{
+			NetProps.SetPropInt( hSpawner, "m_iMinSkillLevel", 1 );
+			NetProps.SetPropInt( hSpawner, "m_iMaxSkillLevel", 5 );
+			continue;
+		}
+		
+		// spawner only spawns on easy/normal/hard, turn it off
+		if ( max <= 3 )
+		{
+			NetProps.SetPropInt( hSpawner, "m_iMinSkillLevel", 4 );
+			NetProps.SetPropInt( hSpawner, "m_iMinSkillLevel", 5 );
+			continue;
+		}
+		
+		if ( cur_difficulty < min )
+			NetProps.SetPropInt( hSpawner, "m_iMinSkillLevel", 1 );
+	}
+}
 
 g_strAlienClassnames <- [
 	"asw_drone",
