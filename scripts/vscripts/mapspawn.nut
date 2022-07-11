@@ -1,5 +1,6 @@
 IncludeScript( "R_chatcolors.nut" );
 IncludeScript( "R_player_say.nut" );
+IncludeScript( "R_leaderboard_logic.nut" );
 
 function CleanList( list )
 {
@@ -57,4 +58,9 @@ function OnMissionStart()	// can this be done in OnMissionStart?
 function PrintToChat( str_message )
 {
 	ClientPrint( null, 3, str_message );
+}
+
+function GetPlayerSteamID()
+{
+	return 0;
 }
