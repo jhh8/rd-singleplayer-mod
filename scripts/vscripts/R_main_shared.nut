@@ -102,6 +102,22 @@ function OnGameplayStart()
 	}
 
 	g_bCheckedMap <- true;
+
+	/*// testing
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "108718913", "47.166" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "2", "47.25" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "3", "47.583" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "4", "47.816" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "5", "48.683" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "6", "48.733" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "7", "49.966" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "8", "50.1" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "9", "50.616" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "10", "51.883" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "11", "52.000" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "12", "53.566" ] );
+	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "13", "57.216" ] );
+	*/
 }
 
 function GetCurrentMapInfo()
@@ -218,7 +234,7 @@ function OnObjectiveCompleted( hObjective )
 	if ( time_difference < 0.01 && time_difference > -0.01 )
 		color = COLOR_YELLOW;
 
-	PrintToChat( COLOR_BLUE + "Pace to WR: " + color + TimeToString( time_difference ) );
+	PrintToChat( COLOR_BLUE + "Pace to WR: " + color + TimeToString( time_difference, false ) );
 }
 
 function Update()
@@ -321,15 +337,15 @@ function OnGameEvent_mission_success( params )
 
 	if ( placements[0] != -1 )
 	{
-		if ( !placements[0] )
+		if ( placements[0] <= 0 )
 			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has placed " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + " on their first run!" );
 		else if ( placements[1] < placements[0] )
-			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has improved by " + COLOR_GREEN + placements[2].tostring() + COLOR_BLUE + " seconds and advanced his placement from " + COLOR_GREEN + placements[0].tostring() + COLOR_BLUE + " to " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + "!" );
+			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved by " + COLOR_GREEN + placements[2].tostring() + COLOR_BLUE + " seconds and placed from " + COLOR_GREEN + placements[0].tostring() + COLOR_BLUE + " to " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + "!" );
 	}
 	else
 	{
 		if ( placements[2] != -1 )
-			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has improved his record by " + COLOR_GREEN + placements[2].tostring() );
+			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved their record by " + COLOR_GREEN + placements[2].tostring() + COLOR_BLUE + " seconds!" );
 	}
 
 	if ( completion_time < g_fWRTime )
@@ -355,10 +371,10 @@ function OnGameEvent_mission_success( params )
 	}
 	
 	if ( g_bNOHITRun )
-		PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has beat the map " + COLOR_GREEN + "without getting hit!" );
+		PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has beat the map " + COLOR_GREEN + "without getting hit" + COLOR_BLUE + "!" );
 	
 	if ( g_bNFNGLRun )
-		PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has beat the map " + COLOR_GREEN + "without flamer and grenade launcher!" );
+		PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has beat the map " + COLOR_GREEN + "without flamer and grenade launcher" + COLOR_BLUE + "!" );
 }
 
 function OnGameEvent_mission_failed( params )
@@ -567,48 +583,12 @@ function DelayFunctionCall( function_name, function_params, delay )
 	EntFireByHandle( this["self"], "RunScriptCode", "this[\"" + function_name + "\"](" + function_params + ");", delay, null, null );
 }
 
-function TimeToString( _time )
-{
-	local compiled_string = "";
-
-	if ( _time < 0 )
-	{
-		_time *= -1;
-		compiled_string += "-";
-	}
-	else
-	{
-		compiled_string += "+";
-	}
-	
-	local miliseconds = 100 * ( _time - _time.tointeger() );
-	miliseconds = miliseconds.tointeger();
-	_time = _time.tointeger();
-
-	if ( _time >= 3600 )
-	{
-		compiled_string += str( _time / 3600 ) + ":";
-		_time %= 3600;
-	}
-
-	compiled_string += str( ( _time / 60 ) / 10 ) + str( ( _time / 60 ) % 10 ) + ":";
-	_time %= 60;
-	compiled_string += str( _time / 10 ) + str( _time % 10 ) + "." + str( miliseconds / 10 ) + str( miliseconds % 10 );
-
-	return compiled_string;
-}
-
 function TruncateFloat( value, precision )
 {
 	if ( precision < 0 || precision > 5 || typeof( value ) != "float" )	// sanity check
 		return value;
 	
 	return ( value * pow( 10, precision ) ).tointeger().tofloat() / pow( 10, precision );
-}
-
-function str( parameter )
-{
-	return parameter.tostring();
 }
 
 function PrintToChat( str_message )
