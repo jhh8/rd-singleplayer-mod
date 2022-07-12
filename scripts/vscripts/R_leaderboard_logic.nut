@@ -27,6 +27,13 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 				{
 					previous_time = leaderboard[i+1];
 					prev_placement = i / 2 + 1;
+
+					// remove previous time
+					leaderboard.remove(i);
+					leaderboard.remove(i);
+
+					// i -= 2;
+
 					break;
 				}
 			}
@@ -75,9 +82,6 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 				if ( leaderboard[i] == caller_steamid )
 				{
 					new_placement = i / 2 + 1;
-
-					// TODO: Remove the slower time from leaderboard
-
 					break;
 				}
 			}
@@ -90,32 +94,59 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 		WriteFile( filename, output_leaderboard, "|", 3, "" );
 
 		if ( caller_steamid )
+		{
+			if ( prev_placement != 0 && new_placement >= prev_placement )
+				return [ -1, -1, previous_time - data[1] ];
+			
 			return [ prev_placement, new_placement, previous_time - data[1] ];
+		}
 	}
 
 	return [ 0, 0, -1 ];
 }
 
+//					  0,     1,     2,     3,     4,     5,     6,     7,     8,     9,    10
+g_arrPrecision <- [ 0.995, 0.993, 0.991, 0.988, 0.985, 0.982, 0.977, 0.970, 0.960, 0.950, 0.940 ];
+
 // we recieve a sorted leaderboard array which contains steamid+time
 function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 {
 	local lb_points = [];
+	local lb_positions = [];
 	local output = [];
 	local lb_length = leaderboard.len();
+	local map_rating_advanced = map_rating * pow( lb_length / 2, 0.2 );
+	local precision_multiplier = g_arrPrecision[ map_precision ];
 	local time_WR = 0;
 
 	if ( lb_length != 0 )
-	{
 		time_WR = leaderboard[1];
+
+	// make sure people with same time are counted as having the same position
+	for ( local i = 1, cur_pos = 1; i < lb_length; i += 2, ++cur_pos )
+	{
+		if ( i == 1 )
+		{
+			lb_positions.push( 1 );
+			continue;
+		}
+
+		if ( leaderboard[i] == leaderboard[i - 2] )
+			--cur_pos;
+
+		lb_positions.push( cur_pos );
 	}
 	
 	for ( local i = 0; i < lb_length; i += 2 )
 	{
 		local points = 0;
-		local reltime = leaderboard[i+1] / time_WR;
+		local reltime = !i && lb_length > 2 ? leaderboard[3] / time_WR : time_WR / leaderboard[i+1];
 
-		// very mathematics here
-		points = ( 1 / reltime ) * map_rating;
+		// xonotic defrag world championship system is - SCORE = 1000 * (time_of_the_fastest_competitor/your_time) * 0.988 ^ (pos - 1)
+		// my system is - SCORE = <map_rating> * (<player_count> ^ 0.2) * (time_of_the_fastest_competitor/your_time) * <precision_multiplier> ^ (pos - 1)
+		points = map_rating_advanced * reltime * pow( precision_multiplier, pow( lb_positions[i/2] - 1, 1.0 ) );
+		if ( points < map_rating )
+			points = map_rating;
 
 		lb_points.push( points );
 	}
