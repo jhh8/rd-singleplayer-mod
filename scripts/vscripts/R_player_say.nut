@@ -214,7 +214,7 @@ function OnGameEvent_player_say( params )
 									for ( local j = 0; j < 13 - array_leaderboard[i].len(); ++j )
 										spaces += " ";
 									
-									PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + COLOR_BLUE + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + " maps" );
+									PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + array_leaderboard[i] + spaces + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + " maps" );
 								}
 								
 								return;
@@ -269,9 +269,151 @@ function OnGameEvent_player_say( params )
 						}
 					}
 				}
-				else
+				else	// map leaderboard
 				{
-					// TODO: mapname leaderboards
+					local leaderboard = CleanList( split( FileToString( "r_" + prefix_short + "_leaderboard_"  + type ), "|" ) );
+					local lb_length = leaderboard.len();
+
+					if ( lb_length == 0 )
+					{
+						PrintToChat( COLOR_YELLOW + "Leaderboard for map " + COLOR_RED + type + COLOR_YELLOW + " does not exist." );
+						return;
+					}
+
+					PrintToChat( COLOR_YELLOW + "Leaderboard for map " + COLOR_GREEN + type + COLOR_YELLOW + ":" );
+					
+					if ( lb_length / 3 <= 5 )
+						range = "full";
+
+					switch ( range )
+					{
+						case "full":
+						{
+							for ( local i = 0; i < lb_length; i += 3 )
+							{
+								local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
+								local name = g_tPlayerList[ leaderboard[i] ];
+								local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+
+								local spaces_name = "";
+								for ( local j = 0; j < 13 - name.len(); ++j )
+									spaces_name += " ";
+								
+								PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+							}
+							
+							return;
+						}
+						case "top":
+						{
+							for ( local i = 0; i < 15; i += 3 )
+							{
+								local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
+								local name = g_tPlayerList[ leaderboard[i] ];
+								local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+
+								local spaces_name = "";
+								for ( local j = 0; j < 13 - name.len(); ++j )
+									spaces_name += " ";
+								
+								PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+							}
+							
+							return;
+						}
+						case "close":
+						{	
+							local caller_index = -1;
+							local start_index = -1;
+							local end_index = -1;
+							local last_index = lb_length - 3;
+							
+							for ( local i = 0; i < lb_length; i += 3 )
+							{
+								if ( leaderboard[i] == caller_steam_id )
+								{
+									caller_index = i;
+									start_index = i - 6;
+									end_index = i + 6;
+									break;
+								}
+							}
+							
+							if ( caller_index == -1 )
+							{
+								// print the "top" range
+								for ( local i = 0; i < 15; i += 3 )
+								{
+									local name = g_tPlayerList[ leaderboard[i] ];
+									local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+
+									local spaces_name = "";
+									for ( local j = 0; j < 13 - name.len(); ++j )
+										spaces_name += " ";
+									
+									PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+								}
+								
+								return;
+							}
+							else
+							{
+								if ( start_index < 0 )
+								{
+									// print the "top" range
+									for ( local i = 0; i < 15; i += 3 )
+									{
+										local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
+										local name = g_tPlayerList[ leaderboard[i] ];
+										local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+
+										local spaces_name = "";
+										for ( local j = 0; j < 13 - name.len(); ++j )
+											spaces_name += " ";
+										
+										PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+									}
+									
+									return;
+								}
+								
+								if ( end_index > last_index )
+								{	
+									for ( local i = start_index - end_index + last_index; i < last_index + 1; i += 3 )
+									{
+										local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
+										local name = g_tPlayerList[ leaderboard[i] ];
+										local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+
+										local spaces_name = "";
+										for ( local j = 0; j < 13 - name.len(); ++j )
+											spaces_name += " ";
+										
+										PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + leaderboard[i + 2] + " points" );
+									}
+									
+									return;
+								}
+								else
+								{
+									for ( local i = start_index; i < end_index + 1; i += 3 )
+									{
+										local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
+										local name = g_tPlayerList[ leaderboard[i] ];
+										local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+
+										local spaces_name = "";
+										for ( local j = 0; j < 13 - name.len(); ++j )
+											spaces_name += " ";
+										
+										PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + leaderboard[i + 2] + " points" );
+									}
+									
+									return;
+								}
+							}
+						}
+					}
 				}
 
 				return;
@@ -289,4 +431,41 @@ function GetKeyFromValue( table, value )
 			return key;
 			
 	return 0;
+}
+
+function TimeToString( _time, bNoSign )
+{
+	local compiled_string = "";
+
+	if ( _time < 0 )
+	{
+		_time *= -1;
+		compiled_string += "-";
+	}
+	else
+	{
+		if ( !bNoSign )
+			compiled_string += "+";
+	}
+	
+	local miliseconds = 100 * ( _time - _time.tointeger() );
+	miliseconds = miliseconds.tointeger();
+	_time = _time.tointeger();
+
+	if ( _time >= 3600 )
+	{
+		compiled_string += str( _time / 3600 ) + ":";
+		_time %= 3600;
+	}
+
+	compiled_string += str( ( _time / 60 ) / 10 ) + str( ( _time / 60 ) % 10 ) + ":";
+	_time %= 60;
+	compiled_string += str( _time / 10 ) + str( _time % 10 ) + "." + str( miliseconds / 10 ) + str( miliseconds % 10 );
+
+	return compiled_string;
+}
+
+function str( parameter )
+{
+	return parameter.tostring();
 }
