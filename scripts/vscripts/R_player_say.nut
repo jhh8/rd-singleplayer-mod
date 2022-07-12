@@ -1,3 +1,18 @@
+const g_fStatCount = 11;				// when adding more stats change this constant
+enum Stats {
+	version,
+	points_relaxed,
+	points_hardcore,
+	killcount,
+	meleekills,
+	missiondecims,
+	distancetravelled,
+	reloadfail,
+	top1,
+	top2,
+	top3
+}
+
 function OnGameEvent_player_say( params )
 {	
 	local text = params["text"];
@@ -19,7 +34,7 @@ function OnGameEvent_player_say( params )
 			case "help":
 			{
 				PrintToChat( COLOR_BLUE + "List of commands:" );
-				PrintToChat( COLOR_GREEN + "- /r profile <name/steamid> <relaxed/hardcore> <general/maps/nf+ngl/nohit>" );
+				PrintToChat( COLOR_GREEN + "- /r profile <name/steamid> <relaxed/hardcore> <general/points/nf+ngl/nohit>" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard <relaxed/hardcore> <mapname/nf+ngl/nohit> <close/top/full>" );
 			}
 		}
@@ -48,13 +63,16 @@ function OnGameEvent_player_say( params )
 				}
 				
 				local player_profile = CleanList( split( FileToString( "r_" + prefix_short + "_profile_" + id + "_" + type ), "|" ) );
-				
-				if ( player_profile.len() == 0 )
-				{
+				local profile_length = player_profile.len();
+
+				if ( profile_length == 0 )
+				{	
 					if ( GetKeyFromValue( g_tPlayerList, id ) )	// GetKeyFromValue( g_tPlayerList, "jhheight" ) == "108718913"
 					{
 						player_profile = CleanList( split( FileToString( "r_" + prefix_short + "_profile_" + GetKeyFromValue( g_tPlayerList, id ) + "_" + type ), "|" ) );
-						if ( player_profile.len() == 0 )
+						profile_length = player_profile.len();
+
+						if ( profile_length == 0 )
 						{
 							PrintToChat( "No such profile found - player exists but profile doesnt" );
 							return;
@@ -69,29 +87,67 @@ function OnGameEvent_player_say( params )
 				// yay we found a profile
 				if ( type == "general" )
 				{
-					if ( player_profile.len() == g_fStatCount )
+					if ( profile_length == g_fStatCount )
 					{
-						PrintToChat( COLOR_BLUE + "Alien kills = " + COLOR_GREEN + player_profile[1] );
-						PrintToChat( COLOR_BLUE + "Alien kills by melee = " + COLOR_GREEN + player_profile[2] );
-						PrintToChat( COLOR_BLUE + "Hours spent in mission = " + COLOR_GREEN + ( player_profile[3].tointeger() / 36000.0 ).tostring() );
-						PrintToChat( COLOR_BLUE + "Total kilometers ran = " + COLOR_GREEN + ( player_profile[4].tointeger() / 10000.0 ).tostring() );
-						PrintToChat( COLOR_BLUE + "Average meters ran per minute = " + COLOR_GREEN + ( 60 * ( ( 1.0 * player_profile[4].tointeger() ) / ( 1.0 * player_profile[3].tointeger() ) ) ).tostring() );
-						PrintToChat( COLOR_BLUE + "Fast reload fails = " + COLOR_GREEN + player_profile[5] );
-						PrintToChat( COLOR_BLUE + "Total times got top1 = " + COLOR_GREEN + player_profile[6] );
-						PrintToChat( COLOR_BLUE + "Total times got top2 = " + COLOR_GREEN + player_profile[7] );
-						PrintToChat( COLOR_BLUE + "Total times got top3 = " + COLOR_GREEN + player_profile[8] );
+						PrintToChat( COLOR_BLUE + "Points on relaxed             = " + COLOR_GREEN + player_profile[ Stats.points_relaxed ].tointeger().tostring() );
+						PrintToChat( COLOR_BLUE + "Points on hardcore            = " + COLOR_GREEN + player_profile[ Stats.points_hardcore ].tointeger().tostring() );
+						PrintToChat( COLOR_BLUE + "Alien kills                   = " + COLOR_GREEN + player_profile[ Stats.killcount ] );
+						PrintToChat( COLOR_BLUE + "Alien kills by melee          = " + COLOR_GREEN + player_profile[ Stats.meleekills ] );
+						PrintToChat( COLOR_BLUE + "Hours spent in mission        = " + COLOR_GREEN + TruncateFloat( ( player_profile[ Stats.missiondecims ].tointeger() / 36000.0 ), 2 ).tostring() );
+						PrintToChat( COLOR_BLUE + "Total kilometers ran          = " + COLOR_GREEN + TruncateFloat( ( player_profile[ Stats.distancetravelled ].tointeger() / 10000.0 ), 2 ).tostring() );
+						PrintToChat( COLOR_BLUE + "Average meters ran per minute = " + COLOR_GREEN + TruncateFloat( ( 60 * ( ( 1.0 * player_profile[ Stats.distancetravelled ].tointeger() ) / ( 1.0 * player_profile[ Stats.missiondecims ].tointeger() ) ) ), 2 ).tostring() );
+						PrintToChat( COLOR_BLUE + "Fast reload fails             = " + COLOR_GREEN + player_profile[ Stats.reloadfail ] );
+						PrintToChat( COLOR_BLUE + "Total times got top1          = " + COLOR_GREEN + player_profile[ Stats.top1 ] );
+						PrintToChat( COLOR_BLUE + "Total times got top2          = " + COLOR_GREEN + player_profile[ Stats.top2 ] );
+						PrintToChat( COLOR_BLUE + "Total times got top3          = " + COLOR_GREEN + player_profile[ Stats.top3 ] );
+					}
+					else
+					{
+						PrintToChat( COLOR_RED + "Internal ERROR: player_profile.len() != g_fStatCount (" + profile_length + " != " + g_fStatCount + " )" );
 					}
 				}
-				else 
+				else if ( type == "points" )
+				{
+					PrintToChat( COLOR_GREEN + profile_length.tostring() + "/" + g_fTotalMapCount.tostring() + " " + COLOR_YELLOW + " maps completed on " + ( prefix == "relaxed" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
+
+					if ( !ValidArray( player_profile, 2 ) )
+					{
+						PrintToChat( COLOR_RED + "Internal ERROR: that player's points profile is invalid length = " + profile_length.tostring() );
+						return;
+					}
+
+					for ( local i = 0; i < profile_length - 2; i += 2 )	// nubic selection sort
+					{
+						local _mapname = player_profile[i];
+						local _points = player_profile[i+1];
+						
+						for ( local j = i + 2; j < profile_length; j += 2 )
+						{
+							if ( _points > player_profile[j+1] )
+							{
+								player_profile[i] = player_profile[j];
+								player_profile[j] = _mapname;
+								_mapname = player_profile[i];
+
+								player_profile[i+1] = player_profile[j+1];
+								player_profile[j+1] = _points;
+								_points = player_profile[i+1];
+							}
+						}
+					}
+
+					for ( local i = 0; i < profile_length; i += 2 )
+						PrintToChat( COLOR_BLUE + player_profile[i] + " = " + COLOR_GREEN + player_profile[i+1] + COLOR_BLUE + " points" );
+				}
+				else
 				{
 					local strText = null;
-					if ( type == "maps" ) 	strText = COLOR_YELLOW + player_profile.len().tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + COLOR_BLUE + " maps completed:";
-					if ( type == "nf+ngl" ) strText = COLOR_YELLOW + player_profile.len().tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + COLOR_BLUE + " maps completed " + COLOR_YELLOW + "without flamer and grenade launcher:";
-					if ( type == "nohit" ) 	strText = COLOR_YELLOW + player_profile.len().tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + COLOR_BLUE + " maps completed " + COLOR_YELLOW + "without getting hit:";
+					if ( type == "nf+ngl" ) strText = COLOR_YELLOW + profile_length.tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + COLOR_BLUE + " maps completed " + COLOR_YELLOW + "without flamer and grenade launcher:";
+					if ( type == "nohit" ) 	strText = COLOR_YELLOW + profile_length.tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + COLOR_BLUE + " maps completed " + COLOR_YELLOW + "without getting hit:";
 
 					PrintToChat( COLOR_BLUE + strText );
 
-					for ( local i = 0; i < player_profile.len(); ++i )
+					for ( local i = 0; i < profile_length; ++i )
 					{
 						PrintToChat( COLOR_BLUE + player_profile[i] );
 					}
