@@ -11,6 +11,12 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 	local prev_placement = 0;
 	local new_placement = 0;
 
+	if ( !ValidArray( leaderboard, 3 ) )
+	{
+		PrintToChat( COLOR_RED + "Internal ERROR: BuildLeaderboard 1: leaderboard array has invalid length = " + leaderboard.len().tostring() );
+		return;
+	}
+
 	if ( leaderboard.len() != 0 )
 	{
 		for ( local i = leaderboard.len() - 1; i > 1; i -= 3 )
@@ -86,18 +92,33 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 				}
 			}
 
+			// case 2, player has not improved his time
 			if ( previous_time != -1 && data[1] > previous_time )
 				return [ -1, -1, -1 ];
 		}
 
 		local output_leaderboard = CalculateLeaderboard( leaderboard, map_rating, map_precision );
+		if ( output_leaderboard == null )
+			return [ -1, -1, -1 ];
+
 		WriteFile( filename, output_leaderboard, "|", 3, "" );
 
 		if ( caller_steamid )
 		{
+			// player just got or improved his WR, write the points changed to everybody's profile in that leaderboard
+			if ( output_leaderboard[0] == caller_steamid )
+			{
+				for ( local i = 0; i < output_leaderboard.len(); i += 3 )
+					WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+2] );
+			}
+			else
+			{	// otherwise the player did not have the WR, change only his points profile
+				WritePlayersPoints( caller_steamid, mode, map_name, output_leaderboard[ new_placement * 3 - 1 ] );
+			}
+			
 			if ( prev_placement != 0 && new_placement >= prev_placement )
 				return [ -1, -1, previous_time - data[1] ];
-			
+
 			return [ prev_placement, new_placement, previous_time - data[1] ];
 		}
 	}
@@ -105,18 +126,27 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 	return [ 0, 0, -1 ];
 }
 
-//					  0,     1,     2,     3,     4,     5,     6,     7,     8,     9,    10
-g_arrPrecision <- [ 0.995, 0.993, 0.991, 0.988, 0.985, 0.982, 0.977, 0.970, 0.960, 0.950, 0.940 ];
+//			   		    0,     1,     2,     3,     4,     5,     6,     7,     8,     9,    10
+//g_arrPrecision <- [ 0.995, 0.993, 0.991, 0.988, 0.985, 0.982, 0.977, 0.970, 0.960, 0.950, 0.940 ];
 
 // we recieve a sorted leaderboard array which contains steamid+time
 function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 {
+	local precision_list = CleanList( split( FileToString( "r_precision_list" ), "|" ) );
+
+	if ( precision_list.len() != 12 )
+	{
+		PrintToChat( COLOR_RED + "Internal ERROR: CalculateLeaderboard: precision list is wrong length = " + precision_list.len().tostring() );
+		return null;
+	}
+
+	local reltime_overload = precision_list[11].tofloat();
 	local lb_points = [];
 	local lb_positions = [];
 	local output = [];
 	local lb_length = leaderboard.len();
 	local map_rating_advanced = map_rating * pow( lb_length / 2, 0.2 );
-	local precision_multiplier = g_arrPrecision[ map_precision ];
+	local precision_multiplier = precision_list[ map_precision ].tofloat();
 	local time_WR = 0;
 
 	if ( lb_length != 0 )
@@ -142,6 +172,10 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 		local points = 0;
 		local reltime = !i && lb_length > 2 ? leaderboard[3] / time_WR : time_WR / leaderboard[i+1];
 
+		// dont get too crazy now
+		if ( reltime > reltime_overload )
+			reltime = reltime_overload;
+
 		// xonotic defrag world championship system is - SCORE = 1000 * (time_of_the_fastest_competitor/your_time) * 0.988 ^ (pos - 1)
 		// my system is - SCORE = <map_rating> * (<player_count> ^ 0.2) * (time_of_the_fastest_competitor/your_time) * <precision_multiplier> ^ (pos - 1)
 		points = map_rating_advanced * reltime * pow( precision_multiplier, pow( lb_positions[i/2] - 1, 1.0 ) );
@@ -159,4 +193,49 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 	}
 
 	return output;
+}
+
+function WritePlayersPoints( steamid, mode, map_name, points )
+{
+	//printl( "WritePlayersPoints called for player " + g_tPlayerList[ steamid ] );
+	local profile_points = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_points" ), "|" ) );
+	local profile_length = profile_points.len();
+	
+	if ( !ValidArray( profile_points, 2 ) )
+	{
+		PrintToChat( COLOR_RED + "Internal ERROR: WritePlayersPoints: profile_points array is invalid length = " + profile_length.tostring() );
+		return;
+	}
+
+	if ( profile_length == 0 )
+	{
+		profile_points.push( map_name );
+		profile_points.push( points );
+	}
+	else
+	{
+		local _bNewMap = true;
+
+		for ( local i = 0; i < profile_length; i += 2 )
+		{
+			if ( profile_points[i] == map_name )
+			{
+				profile_points[i+1] = points;
+				_bNewMap = false;
+			}
+		}
+
+		if ( _bNewMap )
+		{
+			profile_points.push( map_name );
+			profile_points.push( points );
+		}
+	}
+
+	WriteFile( "r_" + mode + "_profile_" + steamid + "_points", profile_points, "|", 2, "" );
+}
+
+function ValidArray( _array, parts )
+{
+	return !( _array.len() % parts );
 }
