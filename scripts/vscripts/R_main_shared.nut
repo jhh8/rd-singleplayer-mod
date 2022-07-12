@@ -42,7 +42,6 @@ g_bNFNGLRun <- true;
 g_bNOHITRun <- true;
 g_bMissionComplete <- false;
 
-const g_fStatCount = 9;				// when adding more stats change this constant
 const g_Version = "1";
 g_stat_killcount <- 0;
 g_stat_meleekills <- 0;
@@ -63,6 +62,14 @@ g_fTotalMapCount <- 0;
 function OnMissionStart()
 {
 	local player_list = CleanList( split( FileToString( FILENAME_PLAYERLIST ), "|" ) );
+
+	if ( !ValidArray( player_list, 2 ) )
+	{
+		PrintToChat( COLOR_RED + "FATAL Internal ERROR: asw_challenge_thinker: player_list array has invalid length = " + player_list.len().tostring() );
+		this["self"].Destroy();
+		return;
+	}
+
 	if ( player_list.len() != 0 )
 	{
 		for ( local i = 0; i < player_list.len(); i += 2 )
@@ -81,7 +88,7 @@ function OnMissionStart()
 }
 
 function OnGameplayStart()
-{	
+{		
 	g_hMarine <- Entities.FindByClassname( null, "asw_marine" );
 	g_hPlayer <- g_hMarine.GetCommander();
 	g_steam_id <- g_hPlayer.GetNetworkIDString().slice( 10 );
@@ -128,6 +135,12 @@ function GetCurrentMapInfo()
 		return;
 
 	maps_info.remove( 0 );	// remove the comment
+
+	if ( !ValidArray( maps_info, 4 ) )
+	{
+		PrintToChat( COLOR_RED + "Internal ERROR: asw_challenge_thinker: maps_info array has invalid length = " + maps_info.len().tostring() );
+		return;
+	}
 
 	g_fTotalMapCount <- maps_info.len() / 4;
 
@@ -177,6 +190,12 @@ function InitializeSplits()
 
 	// extract splits
 	local splits_list = CleanList( split( FileToString( FILENAME_SPLITS ), "|" ) );
+
+	if ( !ValidArray( splits_list, 2 ) )
+	{
+		PrintToChat( COLOR_RED + "Internal ERROR: InitializeSplits: splits_list array has invalid length = " + splits_list.tostring() );
+		return;
+	}
 
 	if ( splits_list.len() == 0 )
 	{
@@ -465,23 +484,21 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 		// here we can identify when a player's profile has to undercome changes and do a stat fixup
 	}
 
-	player_profile[0] = g_Version;
-	player_profile[1] = ( player_profile[1].tointeger() + g_stat_killcount ).tostring();
-	player_profile[2] = ( player_profile[2].tointeger() + g_stat_meleekills ).tostring();
-	player_profile[3] = ( player_profile[3].tointeger() + g_stat_missiondecims ).tostring();
-	player_profile[4] = ( player_profile[4].tointeger() + UnitsToDecimeters( g_stat_distancetravelled ) ).tostring();
-	player_profile[5] = ( player_profile[5].tointeger() + g_stat_reloadfail ).tostring();
+	player_profile[ Stats.version ] = g_Version;
+	player_profile[ Stats.killcount ] = ( player_profile[ Stats.killcount ].tointeger() + g_stat_killcount ).tostring();
+	player_profile[ Stats.meleekills ] = ( player_profile[ Stats.meleekills ].tointeger() + g_stat_meleekills ).tostring();
+	player_profile[ Stats.missiondecims ] = ( player_profile[ Stats.missiondecims ].tointeger() + g_stat_missiondecims ).tostring();
+	player_profile[ Stats.distancetravelled ] = ( player_profile[ Stats.distancetravelled ].tointeger() + UnitsToDecimeters( g_stat_distancetravelled ) ).tostring();
+	player_profile[ Stats.reloadfail ] = ( player_profile[ Stats.reloadfail ].tointeger() + g_stat_reloadfail ).tostring();
 	
-	if ( new_placement == 1 ) player_profile[6] = ( player_profile[6].tointeger() + 1 ).tostring();
-	if ( new_placement == 2 ) player_profile[7] = ( player_profile[7].tointeger() + 1 ).tostring();
-	if ( new_placement == 3 ) player_profile[8] = ( player_profile[8].tointeger() + 1 ).tostring();
+	if ( new_placement == 1 ) player_profile[ Stats.top1 ] = ( player_profile[ Stats.top1 ].tointeger() + 1 ).tostring();
+	if ( new_placement == 2 ) player_profile[ Stats.top2 ] = ( player_profile[ Stats.top2 ].tointeger() + 1 ).tostring();
+	if ( new_placement == 3 ) player_profile[ Stats.top3 ] = ( player_profile[ Stats.top3 ].tointeger() + 1 ).tostring();
 
 	WriteFile( FILENAME_PLAYERPROFILE + "_general", player_profile, "|", 1, "" );
 
 	if ( iMissionComplete )
 	{
-		ManageMapStats( FILENAME_PLAYERPROFILE + "_maps", g_strCurMap );
-
 		if ( g_bNFNGLRun )
 			ManageMapStats( FILENAME_PLAYERPROFILE + "_nf+ngl", g_strCurMap );
 
