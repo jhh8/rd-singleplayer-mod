@@ -8,6 +8,7 @@
 		//"asw_ai_button_hacking_scale"		"10"
 		//"rd_spawn_medkits" 				"31"
 		//"rd_spawn_ammo" 					"51"
+		"rd_slowmo"							"0"
 		"rd_techreq" 						"0"
 		"asw_marine_death_cam_slowdown" 	"0"
 		"rd_hackall" 						"1"
