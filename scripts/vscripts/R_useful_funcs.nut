@@ -7,6 +7,25 @@ function GetKeyFromValue( table, value )
 	return 0;
 }
 
+function BuildPlayerList()
+{
+	local player_list = CleanList( split( FileToString( FILENAME_PLAYERLIST ), "|" ) );
+	if ( player_list.len() != 0 )
+	{
+		for ( local i = 0; i < player_list.len(); i += 2 )
+		{
+			g_tPlayerList[ player_list[i] ] <- player_list[i+1];
+		}
+	}
+	
+	if ( !ValidArray( player_list, 2 ) )
+	{
+		PrintToChat( COLOR_RED + "FATAL Internal ERROR: player_list array has invalid length = " + player_list.len().tostring() );
+		this["self"].Destroy();
+		return;
+	}
+}
+
 function TruncateFloat( value, precision )
 {
 	if ( precision < 0 || precision > 5 || typeof( value ) != "float" )	// sanity check
