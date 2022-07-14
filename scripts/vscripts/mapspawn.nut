@@ -9,20 +9,11 @@ g_fTotalMapCount <- 0;
 g_bSoloModEnabled <- false;
 g_bFatalError <- false;
 
-local player_list = CleanList( split( FileToString( FILENAME_PLAYERLIST ), "|" ) );
-if ( player_list.len() != 0 )
-{
-	for ( local i = 0; i < player_list.len(); i += 2 )
-	{
-		g_tPlayerList[ player_list[i] ] <- player_list[i+1];
-	}
-}
+g_strCurMap <- "";
+g_iMapRating <- -1;
+g_iMapPrecision <- -1;
 
-if ( !ValidArray( player_list, 2 ) )
-{
-	PrintToChat( COLOR_RED + "FATAL Internal ERROR: MapSpawn: player_list array has invalid length = " + player_list.len().tostring() );
-	g_bFatalError <- true;
-}
+BuildPlayerList();
 
 function GetCurrentMapInfo()
 {
@@ -40,6 +31,20 @@ function GetCurrentMapInfo()
 	}
 
 	g_fTotalMapCount <- maps_info.len() / 4;
+	
+	local cur_map = GetMapName().tolower();
+	
+	for ( local i = 0; i < maps_info.len(); i += 4 )
+	{
+		if ( cur_map == maps_info[i + 1] )
+		{
+			g_strCurMap <- maps_info[i];
+			g_iMapRating <- maps_info[i+2].tointeger();
+			g_iMapPrecision <- maps_info[i+3].tointeger();
+
+			return;
+		}
+	}
 }
 
 GetCurrentMapInfo();
@@ -51,6 +56,8 @@ function OnMissionStart()	// can this be done in OnMissionStart?
 	
 	if ( g_bSoloModEnabled )
 		Entities.FindByClassname( null, "asw_challenge_thinker" ).GetScriptScope().OnGameEvent_player_say = null;
+		
+	PrintToChat( "Welcome to singleplayer mod! Play the challenges called \"Ranked Relaxed Solo\" or \"Ranked Hardcore Solo\" to gain points and compete with other players!" );
 }
 
 function GetPlayerSteamID()
