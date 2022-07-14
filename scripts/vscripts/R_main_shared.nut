@@ -3,6 +3,20 @@ IncludeScript( "R_chatcolors.nut" );
 IncludeScript( "R_player_say.nut" );
 IncludeScript( "R_leaderboard_logic.nut" );
 
+enum Stats {
+	version,
+	points_relaxed,
+	points_hardcore,
+	killcount,
+	meleekills,
+	missiondecims,
+	distancetravelled,
+	reloadfail,
+	top1,
+	top2,
+	top3
+}
+
 g_hMarine <- null;
 g_hPlayer <- null;
 g_steam_id <- "";
