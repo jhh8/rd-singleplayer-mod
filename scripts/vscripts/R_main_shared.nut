@@ -1,24 +1,4 @@
-/*
-	left to do:
-- admin commands and admin database
-- leaderboards and points calculator
-
-*/
-
-/*
-	player general profile looks like this:
-	
-	0: last version on which the player played
-	1: alien kill count
-	2: alien kill count by melee
-	3: deci-miliseconds spent in the mission
-	4: decimeters ran in total
-	5: fast reload fails
-	6: number of top1's
-	7: number of top2's
-	8: number of top3's
-*/
-
+IncludeScript( "R_useful_funcs.nut" );
 IncludeScript( "R_chatcolors.nut" );
 IncludeScript( "R_player_say.nut" );
 IncludeScript( "R_leaderboard_logic.nut" );
@@ -43,6 +23,9 @@ g_bNOHITRun <- true;
 g_bMissionComplete <- false;
 
 const g_Version = "1";
+g_bPointsChanged <- false;
+g_stat_prev_points <- 0;
+g_stat_new_points <- 0;
 g_stat_killcount <- 0;
 g_stat_meleekills <- 0;
 g_stat_missiondecims <- 0;
@@ -85,6 +68,8 @@ function OnMissionStart()
 	FILENAME_MAPSINFO <- "r_" + g_strPrefix + "_mapratings";
 	
 	GetCurrentMapInfo();
+
+	//CalculatePlayersGeneralPoints( "108718915", "rs" );
 }
 
 function OnGameplayStart()
@@ -406,21 +391,6 @@ function OnGameEvent_mission_failed( params )
 	UpdatePlayerData( 0, 0 );
 }
 
-function CleanList( list )
-{
-	if ( list.len() == 0 )
-		return list;
-	
-	list.pop();	// pop the end of line
-	
-	for ( local i = 0; i < list.len(); ++i )
-	{
-		list[i] = strip( list[i] );
-	}
-
-	return list;
-}
-
 // writes r_playerlist and player's profile
 function UpdatePlayerData( iMissionComplete, new_placement )
 {
@@ -438,10 +408,10 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 		{
 			bFoundPlayer = true;
 			
-			if ( g_hPlayer.GetPlayerName() != player_list[i+1] )
+			if ( FilterName( g_hPlayer.GetPlayerName() ) != player_list[i+1] )
 			{
 				// the player has changed his name recently
-				player_list[i+1] = g_hPlayer.GetPlayerName();
+				player_list[i+1] = FilterName( g_hPlayer.GetPlayerName() );
 			}
 			else
 			{
@@ -455,7 +425,7 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 	{
 		// player played our mod for the first time, add him into player list file
 		player_list.push( g_steam_id );
-		player_list.push( g_hPlayer.GetPlayerName() );
+		player_list.push( FilterName( g_hPlayer.GetPlayerName() ) );
 	}
 	
 	if ( bWasPlayerListChange )
@@ -485,6 +455,37 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 	}
 
 	player_profile[ Stats.version ] = g_Version;
+
+	g_stat_prev_points <- player_profile[ Stats.points_relaxed ].tofloat();
+
+	if ( g_bPointsChanged )
+	{
+		if ( g_strPrefix == "rs" ) 
+		{
+			if ( g_stat_prev_points > g_stat_new_points )
+			{
+				DelayCodeExecution( "PrintToChat( \"ERROR: Player has lost points after completing the map somehow (\" + g_stat_prev_points.tostring() + \" -> \" + g_stat_new_points + \") not changing points.\" );", 0.02 );
+			}
+			else if ( g_stat_prev_points != g_stat_new_points )
+			{
+				player_profile[ Stats.points_relaxed ] = g_stat_new_points.tostring();
+				DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_BLUE + \"!\" );", 0.02 );
+			}
+		}
+		else if ( g_strPrefix == "hs" ) 
+		{
+			if ( g_stat_prev_points > g_stat_new_points )
+			{
+				DelayCodeExecution( "PrintToChat( \"ERROR: Player has lost points after completing the map somehow (\" + g_stat_prev_points.tostring() + \" -> \" + g_stat_new_points + \") not changing points.\" );", 0.02 );
+			}
+			else if ( g_stat_prev_points != g_stat_new_points )
+			{
+				player_profile[ Stats.points_relaxed ] = g_stat_new_points.tostring();
+				DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_BLUE + \"!\" );", 0.02 );
+			}
+		}
+	}
+
 	player_profile[ Stats.killcount ] = ( player_profile[ Stats.killcount ].tointeger() + g_stat_killcount ).tostring();
 	player_profile[ Stats.meleekills ] = ( player_profile[ Stats.meleekills ].tointeger() + g_stat_meleekills ).tostring();
 	player_profile[ Stats.missiondecims ] = ( player_profile[ Stats.missiondecims ].tointeger() + g_stat_missiondecims ).tostring();
@@ -580,38 +581,6 @@ function WriteFile( file_name, data, str_delimiter, data_per_line, compiled_stri
 	
 	StringToFile( file_name, compiled_string );
 }	
-
-function UnitsToDecimeters( value )
-{
-	return ( value * 0.1905 ).tointeger();
-}
-
-function DelayCodeExecution( string_code, delay )
-{
-	DoEntFire( "worldspawn", "RunScriptCode", string_code, delay, null, null );
-}
-
-function DelayFunctionCall( function_name, function_params, delay )
-{
-	if ( !this["self"] )
-		return;
-	
-	// this[ function_name ]( function_params );
-	EntFireByHandle( this["self"], "RunScriptCode", "this[\"" + function_name + "\"](" + function_params + ");", delay, null, null );
-}
-
-function TruncateFloat( value, precision )
-{
-	if ( precision < 0 || precision > 5 || typeof( value ) != "float" )	// sanity check
-		return value;
-	
-	return ( value * pow( 10, precision ) ).tointeger().tofloat() / pow( 10, precision );
-}
-
-function PrintToChat( str_message )
-{
-	ClientPrint( null, 3, str_message );
-}
 
 function GetPlayerSteamID()
 {
