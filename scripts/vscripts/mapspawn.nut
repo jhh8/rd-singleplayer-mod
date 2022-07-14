@@ -1,21 +1,6 @@
+IncludeScript( "R_useful_funcs.nut" );
 IncludeScript( "R_chatcolors.nut" );
 IncludeScript( "R_player_say.nut" );
-IncludeScript( "R_leaderboard_logic.nut" );
-
-function CleanList( list )
-{
-	if ( list.len() == 0 )
-		return list;
-	
-	list.pop();	// pop the end of line
-	
-	for ( local i = 0; i < list.len(); ++i )
-	{
-		list[i] = strip( list[i] );
-	}
-
-	return list;
-}
 
 const FILENAME_PLAYERLIST = "r_playerlist";
 const FILENAME_MAPSINFO_MAPSPAWN = "r_rs_mapratings";	
@@ -66,19 +51,6 @@ function OnMissionStart()	// can this be done in OnMissionStart?
 	
 	if ( g_bSoloModEnabled )
 		Entities.FindByClassname( null, "asw_challenge_thinker" ).GetScriptScope().OnGameEvent_player_say = null;
-}
-
-function PrintToChat( str_message )
-{
-	ClientPrint( null, 3, str_message );
-}
-
-function TruncateFloat( value, precision )
-{
-	if ( precision < 0 || precision > 5 || typeof( value ) != "float" )	// sanity check
-		return value;
-	
-	return ( value * pow( 10, precision ) ).tointeger().tofloat() / pow( 10, precision );
 }
 
 function GetPlayerSteamID()
