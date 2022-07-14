@@ -22,20 +22,20 @@ function OnGameEvent_player_say( params )
 	if ( argc < 2 )
 		return;
 
-	if ( argv[0] != "/r" )
+	if ( argv[0].tolower() != "/r" )
 		return;
 	
 	local caller_steam_id = GetPlayerFromUserID( params["userid"] ).GetNetworkIDString().slice( 10 );
 	
 	if ( argc == 2 )
 	{
-		switch( argv[1] )
+		switch( argv[1].tolower() )
 		{
 			case "help":
 			{
 				PrintToChat( COLOR_BLUE + "List of commands:" );
 				PrintToChat( COLOR_GREEN + "- /r profile <name/steamid> <relaxed/hardcore> <general/points/nf+ngl/nohit>" );
-				PrintToChat( COLOR_GREEN + "- /r leaderboard <relaxed/hardcore> <mapname/nf+ngl/nohit> <close/top/full>" );
+				PrintToChat( COLOR_GREEN + "- /r leaderboard <relaxed/hardcore> <mapname/nf+ngl/nohit/points> <close/top/full>" );
 			}
 		}
 
@@ -44,7 +44,7 @@ function OnGameEvent_player_say( params )
 
 	if ( argc == 5 )
 	{
-		switch( argv[1] )
+		switch( argv[1].tolower() )
 		{
 			case "profile":
 			{
@@ -108,7 +108,7 @@ function OnGameEvent_player_say( params )
 				}
 				else if ( type == "points" )
 				{
-					PrintToChat( COLOR_GREEN + profile_length.tostring() + "/" + g_fTotalMapCount.tostring() + " " + COLOR_YELLOW + " maps completed on " + ( prefix == "relaxed" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
+					PrintToChat( COLOR_GREEN + ( profile_length / 2 ).tostring() + "/" + g_fTotalMapCount.tostring() + COLOR_YELLOW + " maps completed on " + ( prefix == "relaxed" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
 
 					if ( !ValidArray( player_profile, 2 ) )
 					{
@@ -116,28 +116,14 @@ function OnGameEvent_player_say( params )
 						return;
 					}
 
-					for ( local i = 0; i < profile_length - 2; i += 2 )	// nubic selection sort
-					{
-						local _mapname = player_profile[i];
-						local _points = player_profile[i+1];
-						
-						for ( local j = i + 2; j < profile_length; j += 2 )
-						{
-							if ( _points > player_profile[j+1] )
-							{
-								player_profile[i] = player_profile[j];
-								player_profile[j] = _mapname;
-								_mapname = player_profile[i];
-
-								player_profile[i+1] = player_profile[j+1];
-								player_profile[j+1] = _points;
-								_points = player_profile[i+1];
-							}
-						}
-					}
-
 					for ( local i = 0; i < profile_length; i += 2 )
-						PrintToChat( COLOR_BLUE + player_profile[i] + " = " + COLOR_GREEN + player_profile[i+1] + COLOR_BLUE + " points" );
+					{
+						local spaces = "";
+						for ( local j = 0; j < 7 - player_profile[i].len(); ++j )
+							spaces += " ";
+
+						PrintToChat( COLOR_BLUE + player_profile[i] + spaces + "= " + COLOR_GREEN + player_profile[i+1] + COLOR_BLUE + " points" );
+					}
 				}
 				else
 				{
@@ -177,30 +163,43 @@ function OnGameEvent_player_say( params )
 					return;
 				}
 				
-				if ( type == "nf+ngl" || type == "nohit" )
+				if ( type == "nf+ngl" || type == "nohit" || type == "points" )
 				{
-					local array_leaderboard = [];
-					local leaderboard_length = 0;
-					foreach( steamid, name in g_tPlayerList )
-					{
-						local player_profile = CleanList( split( FileToString( "r_" + prefix_short + "_profile_" + steamid + "_" + type ), "|" ) );
-						local maps_completed = player_profile.len();
+					local array_leaderboard = type == "points" ? CleanList( split( FileToString( "r_" + prefix_short + "_leaderboard_points" ), "|" ) ) : [];
+					local leaderboard_length = array_leaderboard.len();
+					local score_type = type == "points" ? " points" : " maps";
 
-						if ( maps_completed != 0 )
+					if ( type != "points" )
+					{
+						foreach( steamid, name in g_tPlayerList )
 						{
-							local i = 1;
-							for ( ; i < array_leaderboard.len(); i += 2 )
-							{	
-								if ( maps_completed > array_leaderboard[i] )
-									break;
+							local player_profile = CleanList( split( FileToString( "r_" + prefix_short + "_profile_" + steamid + "_" + type ), "|" ) );
+							local maps_completed = player_profile.len();
+
+							if ( maps_completed != 0 )
+							{
+								local i = 1;
+								for ( ; i < array_leaderboard.len(); i += 2 )
+								{	
+									if ( maps_completed > array_leaderboard[i] )
+										break;
+								}
+								
+								array_leaderboard.insert( i - 1, name );
+								array_leaderboard.insert( i, maps_completed );
 							}
-							
-							array_leaderboard.insert( i - 1, name );
-							array_leaderboard.insert( i, maps_completed );
+						}
+						
+						leaderboard_length = array_leaderboard.len();
+					}
+					else
+					{
+						for ( local i = 0; i < leaderboard_length; i += 2 )
+						{
+							array_leaderboard[i] = g_tPlayerList[ array_leaderboard[i] ];
+							array_leaderboard[i+1] = TruncateFloat( array_leaderboard[i+1].tofloat(), 1 ).tostring();
 						}
 					}
-					
-					leaderboard_length = array_leaderboard.len();
 					
 					if ( leaderboard_length == 0 )
 					{
@@ -208,7 +207,8 @@ function OnGameEvent_player_say( params )
 						return;
 					}
 					
-					PrintToChat( COLOR_BLUE + "Most " + COLOR_YELLOW + prefix + " " + type + COLOR_BLUE + " maps completed:" );
+					if ( type != "points" ) PrintToChat( COLOR_YELLOW + "Most " + COLOR_GREEN + type + COLOR_YELLOW + " maps completed on " + ( prefix == "relaxed" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
+					else PrintToChat( ( prefix == "relaxed" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + " points leaderboard:" );
 					
 					if ( leaderboard_length / 2 <= 5 )
 						range = "full";
@@ -224,7 +224,7 @@ function OnGameEvent_player_say( params )
 								for ( local j = 0; j < 13 - array_leaderboard[i].len(); ++j )
 									spaces += " ";
 								
-								PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + " maps" );
+								PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + score_type );
 							}
 							
 							return;
@@ -238,7 +238,7 @@ function OnGameEvent_player_say( params )
 								for ( local j = 0; j < 13 - array_leaderboard[i].len(); ++j )
 									spaces += " ";
 								
-								PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + " maps" );
+								PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + score_type );
 							}
 							
 							return;
@@ -270,7 +270,7 @@ function OnGameEvent_player_say( params )
 									for ( local j = 0; j < 13 - array_leaderboard[i].len(); ++j )
 										spaces += " ";
 									
-									PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + array_leaderboard[i] + spaces + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + " maps" );
+									PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + array_leaderboard[i] + spaces + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + score_type );
 								}
 								
 								return;
@@ -287,7 +287,7 @@ function OnGameEvent_player_say( params )
 										for ( local j = 0; j < 13 - array_leaderboard[i].len(); ++j )
 											spaces += " ";
 										
-										PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + " maps" );
+										PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + score_type );
 									}
 									
 									return;
@@ -302,7 +302,7 @@ function OnGameEvent_player_say( params )
 										for ( local j = 0; j < 13 - array_leaderboard[i].len(); ++j )
 											spaces += " ";
 										
-										PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + " maps" );
+										PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + score_type );
 									}
 									
 									return;
@@ -316,7 +316,7 @@ function OnGameEvent_player_say( params )
 										for ( local j = 0; j < 13 - array_leaderboard[i].len(); ++j )
 											spaces += " ";
 										
-										PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + " maps" );
+										PrintToChat( COLOR_BLUE + (i/2+1).tostring() + ": " + color + array_leaderboard[i] + spaces + COLOR_BLUE + " - " + COLOR_GREEN + array_leaderboard[i + 1].tostring() + COLOR_BLUE + score_type );
 									}
 									
 									return;
@@ -478,50 +478,4 @@ function OnGameEvent_player_say( params )
 	}
 
 	PrintToChat( "Command unrecognised" );
-}
-
-function GetKeyFromValue( table, value )
-{
-	foreach( key, _value in table )
-		if ( value == _value )
-			return key;
-			
-	return 0;
-}
-
-function TimeToString( _time, bNoSign )
-{
-	local compiled_string = "";
-
-	if ( _time < 0 )
-	{
-		_time *= -1;
-		compiled_string += "-";
-	}
-	else
-	{
-		if ( !bNoSign )
-			compiled_string += "+";
-	}
-	
-	local miliseconds = 100 * ( _time - _time.tointeger() );
-	miliseconds = miliseconds.tointeger();
-	_time = _time.tointeger();
-
-	if ( _time >= 3600 )
-	{
-		compiled_string += str( _time / 3600 ) + ":";
-		_time %= 3600;
-	}
-
-	compiled_string += str( ( _time / 60 ) / 10 ) + str( ( _time / 60 ) % 10 ) + ":";
-	_time %= 60;
-	compiled_string += str( _time / 10 ) + str( _time % 10 ) + "." + str( miliseconds / 10 ) + str( miliseconds % 10 );
-
-	return compiled_string;
-}
-
-function str( parameter )
-{
-	return parameter.tostring();
 }
