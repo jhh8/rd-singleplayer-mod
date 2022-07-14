@@ -34,13 +34,34 @@ function OnGameEvent_player_say( params )
 			case "help":
 			{
 				PrintToChat( COLOR_BLUE + "List of commands:" );
-				PrintToChat( COLOR_GREEN + "- /r profile <name/steamid> <relaxed/hardcore> <general/points/nf+ngl/nohit>" );
-				PrintToChat( COLOR_GREEN + "- /r leaderboard <relaxed/hardcore> <mapname/nf+ngl/nohit/points> <close/top/full>" );
+				PrintToChat( COLOR_GREEN + "- /r profile " + COLOR_YELLOW + "<name/steamid>" + COLOR_BLUE + " <relaxed/hardcore>" + COLOR_RED + " <general/points/nf+ngl/nohit>" );
+				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_YELLOW + " <relaxed/hardcore>" + COLOR_BLUE + " <mapname/nf+ngl/nohit/points>" + COLOR_RED + " <close/top/full>" );
+				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_BLUE + " - prints current map's and challenge's leaderboard" );
+				return;
+			}
+			case "leaderboard":
+			{
+				if ( Convars.GetStr( "rd_challenge" ) == "R_RS" ) argv.push( "relaxed" );
+				else if ( Convars.GetStr( "rd_challenge" ) == "R_HS" ) argv.push( "hardcore" );
+				else return;
+				
+				argv.push( g_strCurMap );
+				argv.push( "full" );
+				
+				argc = 5;
 			}
 		}
-
-		return;
 	}
+	
+	//if ( argc == 3 )
+	//{
+	//	if ( argv[1].tolower() == "run_code" )
+	//	{
+	//		DoEntFire( "asw_challenge_thinker", "runscriptcode", argv[2], 0, null, null );
+	//	}
+	//}
+	
+	BuildPlayerList();
 
 	if ( argc == 5 )
 	{
