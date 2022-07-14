@@ -13,7 +13,7 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 
 	if ( !ValidArray( leaderboard, 3 ) )
 	{
-		PrintToChat( COLOR_RED + "Internal ERROR: BuildLeaderboard 1: leaderboard array has invalid length = " + leaderboard.len().tostring() );
+		PrintToChat( COLOR_RED + "Internal ERROR: BuildLeaderboard: leaderboard array has invalid length = " + leaderboard.len().tostring() );
 		return;
 	}
 
@@ -57,25 +57,7 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 	local lb_length = leaderboard.len();
 	if ( lb_length != 0 )
 	{
-		for ( local i = 0; i < lb_length - 2; i += 2 )	// nubic selection sort
-		{
-			local _steamid = leaderboard[i];
-			local _time = leaderboard[i+1];
-			
-			for ( local j = i + 2; j < lb_length; j += 2 )
-			{
-				if ( _time > leaderboard[j+1] )
-				{
-					leaderboard[i] = leaderboard[j];
-					leaderboard[j] = _steamid;
-					_steamid = leaderboard[i];
-
-					leaderboard[i+1] = leaderboard[j+1];
-					leaderboard[j+1] = _time;
-					_time = leaderboard[i+1];
-				}
-			}
-		}
+		SortArray2( leaderboard, false );
 
 		// case 1: first entry - write leaderboard
 		// case 2: not first entry, time not improved, placement not improved too then - dont write leaderboard
@@ -111,8 +93,13 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 				for ( local i = 0; i < output_leaderboard.len(); i += 3 )
 					WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+2] );
 			}
+			else if ( output_leaderboard[3] == caller_steamid )
+			{	// the player improved or got their second place, which means the first player's points could have changed, output_leaderboard[0] = first player's steam id
+				WritePlayersPoints( output_leaderboard[0], mode, map_name, output_leaderboard[2] );
+				WritePlayersPoints( caller_steamid, mode, map_name, output_leaderboard[5] );
+			}
 			else
-			{	// otherwise the player did not have the WR, change only his points profile
+			{	// player improved time and/or got a new placement which is top3 or worse, this will only affect their points
 				WritePlayersPoints( caller_steamid, mode, map_name, output_leaderboard[ new_placement * 3 - 1 ] );
 			}
 			
@@ -197,13 +184,12 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 
 function WritePlayersPoints( steamid, mode, map_name, points )
 {
-	//printl( "WritePlayersPoints called for player " + g_tPlayerList[ steamid ] );
 	local profile_points = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_points" ), "|" ) );
 	local profile_length = profile_points.len();
 	
 	if ( !ValidArray( profile_points, 2 ) )
 	{
-		PrintToChat( COLOR_RED + "Internal ERROR: WritePlayersPoints: profile_points array is invalid length = " + profile_length.tostring() );
+		PrintToChat( COLOR_RED + "Internal ERROR: WritePlayersPoints: profile_points array for player " + steamid + " is invalid length = " + profile_length.tostring() );
 		return;
 	}
 
@@ -232,10 +218,76 @@ function WritePlayersPoints( steamid, mode, map_name, points )
 		}
 	}
 
+	SortArray2( profile_points );
+
 	WriteFile( "r_" + mode + "_profile_" + steamid + "_points", profile_points, "|", 2, "" );
+
+	CalculatePlayersGeneralPoints( steamid, mode );
 }
 
-function ValidArray( _array, parts )
+function CalculatePlayersGeneralPoints( steamid, mode )
 {
-	return !( _array.len() % parts );
+	local profile_points = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_points" ), "|" ) );
+	local profile_length = profile_points.len();
+	if ( profile_length == 0 )
+	{
+		PrintToChat( "MINOR Internal ERROR: CalculatePlayersGeneralPoints: player " + steamid + " doesnt have a points profile" );
+		return;
+	}
+
+	if ( !ValidArray( profile_points, 2 ) )
+	{
+		PrintToChat( "MINOR Internal ERROR: CalculatePlayersGeneralPoints: profile_points array for player " + steamid + " is invalid length = " + profile_length.tostring() );
+		return;
+	}
+
+	local increment = 20;
+	local points = 0.0;
+	for ( local i = 0; i < ( profile_length - 1 ) / increment + 1; ++i )
+		for ( local j = increment * i, maps_count = 1; j < profile_length && maps_count <= increment / 2; j += 2, ++maps_count )
+			points += profile_points[j + 1].tofloat() / ( increment * ( pow( 2, i ) ) );
+
+	if ( steamid == g_steam_id )
+	{	// points will be written to general profile in UpdatePlayerData function
+		g_bPointsChanged <- true;
+		g_stat_new_points <- points;
+	}
+	else
+	{
+		local player_general_profile = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_general" ), "|" ) );
+		if ( player_general_profile.len() == 0 )
+		{
+			PrintToChat( "MINOR Internal ERROR: CalculatePlayersGeneralPoints: player " + steamid + " doesnt have a general profile" );	
+			return;
+		}
+
+		if ( mode == "rs" ) player_general_profile[ Stats.points_relaxed ] = points;
+		if ( mode == "hs" ) player_general_profile[ Stats.points_hardcore ] = points;
+
+		WriteFile( "r_" + mode + "_profile_" + steamid + "_general", player_general_profile, "|", 1, "" );
+	}
+
+	local leaderboard_points = CleanList( split( FileToString( "r_" + mode + "_leaderboard_points" ), "|" ) );
+	local lb_length = leaderboard_points.len();
+	local bPlayerFound = false;
+
+	for ( local i = 0; i < lb_length; i += 2 )
+	{
+		if ( leaderboard_points[i] == steamid )
+		{
+			leaderboard_points[i+1] = points.tostring();
+			bPlayerFound = true;
+			break;
+		}
+	}
+
+	if ( !bPlayerFound )
+	{
+		leaderboard_points.push( steamid );
+		leaderboard_points.push( points.tostring() );
+	}
+
+	SortArray2( leaderboard_points );
+
+	WriteFile( "r_" + mode + "_leaderboard_points", leaderboard_points, "|", 2, "" );
 }
