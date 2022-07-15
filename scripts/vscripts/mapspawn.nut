@@ -57,7 +57,9 @@ function OnMissionStart()	// can this be done in OnMissionStart?
 	if ( g_bSoloModEnabled )
 		Entities.FindByClassname( null, "asw_challenge_thinker" ).GetScriptScope().OnGameEvent_player_say = null;
 		
-	PrintToChat( "Welcome to singleplayer mod! Play the challenges called \"Ranked Relaxed Solo\" or \"Ranked Hardcore Solo\" to gain points and compete with other players!" );
+	PrintToChat( COLOR_BLUE + "Welcome to singleplayer mod!" );
+	PrintToChat( COLOR_BLUE + "Play the challenges called " + COLOR_GREEN + "Ranked Relaxed Solo" + COLOR_BLUE + " or " + COLOR_GREEN + "Ranked Hardcore Solo" + COLOR_BLUE + " to gain points and compete with other players!" );
+	PrintToChat( COLOR_BLUE + "Type " + COLOR_GREEN + "/r help" + COLOR_BLUE + " for some useful chat commands" );
 }
 
 function GetPlayerSteamID()
