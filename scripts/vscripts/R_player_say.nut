@@ -34,23 +34,104 @@ function OnGameEvent_player_say( params )
 			case "help":
 			{
 				PrintToChat( COLOR_BLUE + "List of commands:" );
-				PrintToChat( COLOR_GREEN + "- /r profile " + COLOR_YELLOW + "<name/steamid>" + COLOR_BLUE + " <relaxed/hardcore>" + COLOR_RED + " <general/points/nf+ngl/nohit>" );
-				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_YELLOW + " <relaxed/hardcore>" + COLOR_BLUE + " <mapname/nf+ngl/nohit/points>" + COLOR_RED + " <close/top/full>" );
+				PrintToChat( COLOR_GREEN + "- /r profile " + COLOR_YELLOW + "<name/steamid>" + COLOR_RED + " <relaxed/hardcore>" + COLOR_YELLOW + " <general/points/nf+ngl/nohit>" );
+				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_YELLOW + " <relaxed/hardcore>" + COLOR_RED + " <mapname/nf+ngl/nohit/points>" + COLOR_YELLOW + " <close/top/full>" );
+				PrintToChat( COLOR_GREEN + "- /r maplist" + COLOR_BLUE + " - prints a list of all supported maps" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_BLUE + " - prints current map's and challenge's leaderboard" );
+				PrintToChat( COLOR_GREEN + "- /r points" + COLOR_BLUE + " - prints current challenge's points leaderboard" );
+				PrintToChat( COLOR_GREEN + "- /r profile" + COLOR_BLUE + " - prints your current challenge's general profile" );
 				return;
+			}
+			case "maplist":
+			{
+				local map_list = CleanList( split( FileToString( "r_maplist" ), "|" ) );
+
+				if ( map_list.len() == 0 || !ValidArray( map_list, 2 ) )
+				{
+					PrintToChat( "Internal ERROR: map_list has invalid length = " + map_list.len() );
+					return;
+				}
+
+				PrintToChat( "Full list of supported maps:" );
+				for ( local i = 0; i < map_list.len(); i += 2 )
+				{
+					local color1 = COLOR_GREEN;
+					local color2 = COLOR_BLUE;
+					local spaces = "";
+
+					if ( map_list[i] == "=" )
+					{
+						color1 = COLOR_YELLOW;
+						color2 = COLOR_YELLOW;
+						spaces = " ";
+					}
+					else
+					{
+						for ( local j = 0; j < 7 - map_list[i].len(); ++j )
+							spaces += " ";
+					}
+
+					PrintToChat( color1 + map_list[i] + spaces + color2 + "= " + map_list[i+1] );
+				}
+				return;
+			}
+			case "points":
+			{
+				local mode = "";
+				if ( Convars.GetStr( "rd_challenge" ) == "R_RS" ) mode = "RELAXED";
+				else if ( Convars.GetStr( "rd_challenge" ) == "R_HS" ) mode = "HARDCORE";
+				else return;
+				
+				argv.push( "" );
+				argv.push( "" );
+				argv.push( "" );
+
+				argv[1] = "leaderboard";
+				argv[2] = mode;
+				argv[3] = "points";
+				argv[4] = "full";
+
+				argc = 5;
+				break;
+			}
+			case "profile":
+			{
+				local mode = "";
+				if ( Convars.GetStr( "rd_challenge" ) == "R_RS" ) mode = "RELAXED";
+				else if ( Convars.GetStr( "rd_challenge" ) == "R_HS" ) mode = "HARDCORE";
+				else return;
+				
+				argv.push( "" );
+				argv.push( "" );
+				argv.push( "" );
+
+				argv[1] = "profile";
+				argv[2] = caller_steam_id;
+				argv[3] = mode;
+				argv[4] = "general";
+
+				argc = 5;
+				break;
 			}
 			case "leaderboard":
 			{
-				if ( Convars.GetStr( "rd_challenge" ) == "R_RS" ) argv.push( "relaxed" );
-				else if ( Convars.GetStr( "rd_challenge" ) == "R_HS" ) argv.push( "hardcore" );
+				if ( Convars.GetStr( "rd_challenge" ) == "R_RS" ) argv.push( "RELAXED" );
+				else if ( Convars.GetStr( "rd_challenge" ) == "R_HS" ) argv.push( "HARDCORE" );
 				else return;
 				
 				argv.push( g_strCurMap );
 				argv.push( "full" );
 				
 				argc = 5;
+				break;
 			}
 		}
+	}
+
+	if ( argc == 4 && argv[1] == "leaderboard" )
+	{
+		argv.push( "full" );
+		argc = 5;
 	}
 	
 	//if ( argc == 3 )
@@ -69,13 +150,13 @@ function OnGameEvent_player_say( params )
 		{
 			case "profile":
 			{
-				local prefix = argv[3];
+				local prefix = argv[3].toupper();
 				local prefix_short = "";
 				local id = argv[2];
 				local type = argv[4];
 
-				if ( prefix == "relaxed" ) prefix_short = "rs";
-				if ( prefix == "hardcore" ) prefix_short = "hs";
+				if ( prefix == "RELAXED" ) prefix_short = "rs";
+				if ( prefix == "HARDCORE" ) prefix_short = "hs";
 
 				if ( prefix_short == "" )
 				{
@@ -129,7 +210,7 @@ function OnGameEvent_player_say( params )
 				}
 				else if ( type == "points" )
 				{
-					PrintToChat( COLOR_GREEN + ( profile_length / 2 ).tostring() + "/" + g_fTotalMapCount.tostring() + COLOR_YELLOW + " maps completed on " + ( prefix == "relaxed" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
+					PrintToChat( COLOR_GREEN + ( profile_length / 2 ).tostring() + "/" + g_fTotalMapCount.tostring() + COLOR_YELLOW + " maps completed on " + ( prefix == "RELAXED" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
 
 					if ( !ValidArray( player_profile, 2 ) )
 					{
@@ -164,13 +245,13 @@ function OnGameEvent_player_say( params )
 			}
 			case "leaderboard":
 			{
-				local prefix = argv[2];
+				local prefix = argv[2].toupper();
 				local prefix_short = "";
 				local type = argv[3];
 				local range = argv[4];
 				
-				if ( prefix == "relaxed" ) prefix_short = "rs";
-				if ( prefix == "hardcore" ) prefix_short = "hs";
+				if ( prefix == "RELAXED" ) prefix_short = "rs";
+				if ( prefix == "HARDCORE" ) prefix_short = "hs";
 
 				if ( prefix_short == "" )
 				{
@@ -228,8 +309,8 @@ function OnGameEvent_player_say( params )
 						return;
 					}
 					
-					if ( type != "points" ) PrintToChat( COLOR_YELLOW + "Most " + COLOR_GREEN + type + COLOR_YELLOW + " maps completed on " + ( prefix == "relaxed" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
-					else PrintToChat( ( prefix == "relaxed" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + " points leaderboard:" );
+					if ( type != "points" ) PrintToChat( COLOR_YELLOW + "Most " + COLOR_GREEN + type + COLOR_YELLOW + " maps completed on " + ( prefix == "RELAXED" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
+					else PrintToChat( ( prefix == "RELAXED" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + " points leaderboard:" );
 					
 					if ( leaderboard_length / 2 <= 5 )
 						range = "full";
@@ -357,7 +438,7 @@ function OnGameEvent_player_say( params )
 						return;
 					}
 
-					PrintToChat( COLOR_YELLOW + "Leaderboard for map " + COLOR_GREEN + type + COLOR_YELLOW + ":" );
+					PrintToChat( COLOR_YELLOW + "Leaderboard for map " + COLOR_GREEN + type + COLOR_YELLOW + " on " + ( prefix == "RELAXED" ? COLOR_GREEN : COLOR_RED ) + prefix.toupper() + COLOR_YELLOW + ":" );
 					
 					if ( lb_length / 3 <= 5 )
 						range = "full";
