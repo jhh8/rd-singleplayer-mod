@@ -99,8 +99,16 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 				WritePlayersPoints( caller_steamid, mode, map_name, output_leaderboard[5] );
 			}
 			else
-			{	// player improved time and/or got a new placement which is top3 or worse, this will only affect their points
-				WritePlayersPoints( caller_steamid, mode, map_name, output_leaderboard[ new_placement * 3 - 1 ] );
+			{	
+				if ( prev_placement == 0 )
+				{	// player got his first entry, everybody's points will change
+					for ( local i = 0; i < output_leaderboard.len(); i += 3 )
+						WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+2] );
+				}
+				else	// player improved time and/or got a new placement which is top3 or worse, this will only affect their points
+				{
+					WritePlayersPoints( caller_steamid, mode, map_name, output_leaderboard[ new_placement * 3 - 1 ] );
+				}
 			}
 			
 			if ( prev_placement != 0 && new_placement >= prev_placement )
