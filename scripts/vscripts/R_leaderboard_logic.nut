@@ -269,8 +269,7 @@ function CalculatePlayersGeneralPoints( steamid, mode )
 			return;
 		}
 
-		if ( mode == "rs" ) player_general_profile[ Stats.points_relaxed ] = points;
-		if ( mode == "hs" ) player_general_profile[ Stats.points_hardcore ] = points;
+		player_general_profile[ Stats.points ] = points;
 
 		WriteFile( "r_" + mode + "_profile_" + steamid + "_general", player_general_profile, "|", 1, "" );
 	}
