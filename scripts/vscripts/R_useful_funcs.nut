@@ -1,3 +1,49 @@
+function GetCurrentMapInfo()
+{
+	local FILENAME_MAPSINFO = "r_" + ( IsHardcore() ? "hs" : "rs" ) + "_mapratings";
+	local maps_info = CleanList( split( FileToString( FILENAME_MAPSINFO ), "|" ) );
+
+	if ( maps_info.len() == 0 )
+		return;
+
+	maps_info.remove( 0 );	// remove the comment
+
+	if ( !ValidArray( maps_info, 4 ) )
+	{
+		PrintToChat( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring() );
+		return;
+	}
+
+	g_fTotalMapCount <- maps_info.len() / 4;
+	
+	local cur_map = GetMapName().tolower();
+	
+	for ( local i = 0; i < maps_info.len(); i += 4 )
+	{
+		if ( cur_map == maps_info[i + 1] )
+		{
+			g_strCurMap <- maps_info[i];
+			g_iMapRating <- maps_info[i+2].tointeger();
+			g_iMapPrecision <- maps_info[i+3].tointeger();
+
+			return;
+		}
+	}
+}
+
+function IsHardcore()
+{
+	return Convars.GetStr( "rd_challenge" ) == "R_HS" ? true : false;
+}
+
+function GetTotalMapCount( mode )
+{
+	local FILENAME_MAPSINFO = "r_" + ( mode == "HARDCORE" ? "hs" : "rs" ) + "_mapratings";
+	local maps_info = CleanList( split( FileToString( FILENAME_MAPSINFO ), "|" ) );
+
+	return maps_info.len() / 4;
+}
+
 function GetKeyFromValue( table, value )
 {
 	foreach( key, _value in table )
@@ -106,6 +152,26 @@ function CleanList( list )
 	}
 
 	return list;
+}
+
+function WriteFile( file_name, data, str_delimiter, data_per_line, compiled_string_initialize )
+{
+	local compiled_string = compiled_string_initialize;
+	
+	for ( local i = 0; i < data.len(); i += data_per_line )
+	{
+		for ( local j = i; j < i + data_per_line; ++j )
+		{
+			compiled_string += data[j] + str_delimiter;
+			
+			if ( j + 1 == i + data_per_line )	// last piece of data on a line
+			{
+				compiled_string += "\n";
+			}
+		}
+	}
+	
+	StringToFile( file_name, compiled_string );
 }
 
 function ValidArray( _array, parts )
