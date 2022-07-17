@@ -5,8 +5,7 @@ IncludeScript( "R_leaderboard_logic.nut" );
 
 enum Stats {
 	version,
-	points_relaxed,
-	points_hardcore,
+	points,
 	killcount,
 	meleekills,
 	missiondecims,
@@ -51,7 +50,6 @@ g_vecPrevCoordinates <- Vector();
 
 const FILENAME_PLAYERLIST = "r_playerlist";
 FILENAME_PLAYERPROFILE <- "";
-FILENAME_MAPSINFO <- "";
 FILENAME_SPLITS <- "";
 g_tPlayerList <- {};	// player list table. index is steamid, value is player's name
 g_fTotalMapCount <- 0;
@@ -75,15 +73,11 @@ function OnMissionStart()
 		}
 	}
 	
-	g_strPrefix <- Convars.GetStr( "rd_challenge" ) == "R_RS" ? "rs" : "hs";
+	g_strPrefix <- IsHardcore() ? "hs" : "rs";
 	
 	g_fTimeStart <- Time();
-
-	FILENAME_MAPSINFO <- "r_" + g_strPrefix + "_mapratings";
 	
 	GetCurrentMapInfo();
-
-	//CalculatePlayersGeneralPoints( "108718915", "rs" );
 }
 
 function OnGameplayStart()
@@ -124,38 +118,6 @@ function OnGameplayStart()
 	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "12", "53.566" ] );
 	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "13", "57.216" ] );
 	*/
-}
-
-function GetCurrentMapInfo()
-{
-	local maps_info = CleanList( split( FileToString( FILENAME_MAPSINFO ), "|" ) );
-
-	if ( maps_info.len() == 0 )
-		return;
-
-	maps_info.remove( 0 );	// remove the comment
-
-	if ( !ValidArray( maps_info, 4 ) )
-	{
-		PrintToChat( COLOR_RED + "Internal ERROR: asw_challenge_thinker: maps_info array has invalid length = " + maps_info.len().tostring() );
-		return;
-	}
-
-	g_fTotalMapCount <- maps_info.len() / 4;
-
-	local cur_map = GetMapName().tolower();
-
-	for ( local i = 0; i < maps_info.len(); i += 4 )
-	{
-		if ( cur_map == maps_info[i + 1] )
-		{
-			g_strCurMap <- maps_info[i];
-			g_iMapRating <- maps_info[i+2].tointeger();
-			g_iMapPrecision <- maps_info[i+3].tointeger();
-
-			return;
-		}
-	}
 }
 
 function InitializeSplits()
@@ -358,12 +320,12 @@ function OnGameEvent_mission_success( params )
 		if ( placements[0] <= 0 )
 			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has placed " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + " on their first run!" );
 		else if ( placements[1] < placements[0] )
-			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved by " + COLOR_GREEN + placements[2].tostring() + COLOR_BLUE + " seconds and placed from " + COLOR_GREEN + placements[0].tostring() + COLOR_BLUE + " to " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + "!" );
+			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved by " + COLOR_GREEN + TruncateFloat( placements[2], 2 ).tostring() + COLOR_BLUE + " seconds and placed from " + COLOR_GREEN + placements[0].tostring() + COLOR_BLUE + " to " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + "!" );
 	}
 	else
 	{
 		if ( placements[2] != -1 )
-			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved their record by " + COLOR_GREEN + placements[2].tostring() + COLOR_BLUE + " seconds!" );
+			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved their record by " + COLOR_GREEN + TruncateFloat( placements[2], 2 ).tostring() + COLOR_BLUE + " seconds!" );
 	}
 
 	if ( completion_time < g_fWRTime )
@@ -470,33 +432,18 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 
 	player_profile[ Stats.version ] = g_Version;
 
-	g_stat_prev_points <- player_profile[ Stats.points_relaxed ].tofloat();
+	g_stat_prev_points <- player_profile[ Stats.points ].tofloat();
 
 	if ( g_bPointsChanged )
 	{
-		if ( g_strPrefix == "rs" ) 
+		if ( g_stat_prev_points > g_stat_new_points )
 		{
-			if ( g_stat_prev_points > g_stat_new_points )
-			{
-				DelayCodeExecution( "PrintToChat( \"ERROR: Player has lost points after completing the map somehow (\" + g_stat_prev_points.tostring() + \" -> \" + g_stat_new_points + \") not changing points.\" );", 0.02 );
-			}
-			else if ( g_stat_prev_points != g_stat_new_points )
-			{
-				player_profile[ Stats.points_relaxed ] = g_stat_new_points.tostring();
-				DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_BLUE + \"!\" );", 0.02 );
-			}
+			DelayCodeExecution( "PrintToChat( \"ERROR: Player has lost points after completing the map somehow (\" + g_stat_prev_points.tostring() + \" -> \" + g_stat_new_points + \") not changing points.\" );", 0.02 );
 		}
-		else if ( g_strPrefix == "hs" ) 
+		else if ( g_stat_prev_points != g_stat_new_points )
 		{
-			if ( g_stat_prev_points > g_stat_new_points )
-			{
-				DelayCodeExecution( "PrintToChat( \"ERROR: Player has lost points after completing the map somehow (\" + g_stat_prev_points.tostring() + \" -> \" + g_stat_new_points + \") not changing points.\" );", 0.02 );
-			}
-			else if ( g_stat_prev_points != g_stat_new_points )
-			{
-				player_profile[ Stats.points_relaxed ] = g_stat_new_points.tostring();
-				DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_BLUE + \"!\" );", 0.02 );
-			}
+			player_profile[ Stats.points ] = g_stat_new_points.tostring();
+			DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_GREEN + \"(+\" ( g_stat_new_points - g_stat_prev_points ).tostring() + \")\" + COLOR_BLUE + \"!\" );", 0.02 );
 		}
 	}
 
@@ -574,26 +521,6 @@ function IsNewMapInList( list, mapname, read_beginning, read_end )
 	}
 
 	return true;
-}
-
-function WriteFile( file_name, data, str_delimiter, data_per_line, compiled_string_initialize )
-{
-	local compiled_string = compiled_string_initialize;
-	
-	for ( local i = 0; i < data.len(); i += data_per_line )
-	{
-		for ( local j = i; j < i + data_per_line; ++j )
-		{
-			compiled_string += data[j] + str_delimiter;
-			
-			if ( j + 1 == i + data_per_line )	// last piece of data on a line
-			{
-				compiled_string += "\n";
-			}
-		}
-	}
-	
-	StringToFile( file_name, compiled_string );
 }	
 
 function GetPlayerSteamID()
