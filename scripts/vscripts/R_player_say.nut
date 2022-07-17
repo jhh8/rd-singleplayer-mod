@@ -1,8 +1,7 @@
-const g_fStatCount = 11;				// when adding more stats change this constant
+const g_fStatCount = 10;				// when adding more stats change this constant
 enum Stats {
 	version,
-	points_relaxed,
-	points_hardcore,
+	points,
 	killcount,
 	meleekills,
 	missiondecims,
@@ -34,12 +33,13 @@ function OnGameEvent_player_say( params )
 			case "help":
 			{
 				PrintToChat( COLOR_BLUE + "List of commands:" );
-				PrintToChat( COLOR_GREEN + "- /r profile " + COLOR_YELLOW + "<name/steamid>" + COLOR_RED + " <relaxed/hardcore>" + COLOR_YELLOW + " <general/points/nf+ngl/nohit>" );
-				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_YELLOW + " <relaxed/hardcore>" + COLOR_RED + " <mapname/nf+ngl/nohit/points>" + COLOR_YELLOW + " <close/top/full>" );
+				PrintToChat( COLOR_GREEN + "- /r profile " + COLOR_YELLOW + "[name/steamid]" + COLOR_RED + " [relaxed/hardcore]" + COLOR_YELLOW + " [general/points/nf+ngl/nohit]" );
+				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_RED + " [relaxed/hardcore]" + COLOR_YELLOW + " [mapname/nf+ngl/nohit/points]" + COLOR_RED + " [close/top/full]" );
 				PrintToChat( COLOR_GREEN + "- /r maplist" + COLOR_BLUE + " - prints a list of all supported maps" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_BLUE + " - prints current map's and challenge's leaderboard" );
 				PrintToChat( COLOR_GREEN + "- /r points" + COLOR_BLUE + " - prints current challenge's points leaderboard" );
 				PrintToChat( COLOR_GREEN + "- /r profile" + COLOR_BLUE + " - prints your current challenge's general profile" );
+				PrintToChat( COLOR_GREEN + "- /r welcome " + COLOR_YELLOW + "[yes/no]" + COLOR_BLUE + " - disable/enable welcome message for yourself" );
 				return;
 			}
 			case "maplist":
@@ -141,6 +141,44 @@ function OnGameEvent_player_say( params )
 	//		DoEntFire( "asw_challenge_thinker", "runscriptcode", argv[2], 0, null, null );
 	//	}
 	//}
+	if ( argv[1] == "welcome" )
+	{
+		if ( argc == 2 )
+		{
+			PrintToChat( "Expected a yes or no." );
+			return;
+		}
+
+		if ( argv[2] == "no" )
+		{
+			local notwelcome_list = CleanList( split( FileToString( "r_notwelcome" ), "|" ) );
+			notwelcome_list.push( caller_steam_id );
+			WriteFile( "r_notwelcome", notwelcome_list, "|", 1, "" );
+			PrintToChat( COLOR_PURPLE + "Welcome message " + COLOR_RED + "disabled" + COLOR_PURPLE + "." );
+			return;
+		}
+
+		if ( argv[2] == "yes" )
+		{
+			local notwelcome_list = CleanList( split( FileToString( "r_notwelcome" ), "|" ) );
+			
+			foreach( index, _player in notwelcome_list )
+			{
+				if ( _player == caller_steam_id )
+				{
+					notwelcome_list.remove( index );
+					break;
+				}
+			}
+
+			WriteFile( "r_notwelcome", notwelcome_list, "|", 1, "" );
+			PrintToChat( COLOR_PURPLE + "Welcome message " + COLOR_GREEN + "enabled" + COLOR_PURPLE + "." );
+			return;
+		}
+
+		PrintToChat( "Expected a yes or no." );
+		return;
+	}
 	
 	BuildPlayerList();
 
@@ -191,17 +229,15 @@ function OnGameEvent_player_say( params )
 				{
 					if ( profile_length == g_fStatCount )
 					{
-						PrintToChat( COLOR_BLUE + "Points on relaxed             = " + COLOR_GREEN + player_profile[ Stats.points_relaxed ].tointeger().tostring() );
-						PrintToChat( COLOR_BLUE + "Points on hardcore            = " + COLOR_GREEN + player_profile[ Stats.points_hardcore ].tointeger().tostring() );
+						PrintToChat( COLOR_GREEN + ( g_tPlayerList.rawin( id ) ? g_tPlayerList[id] : id ) + COLOR_YELLOW + "'s general stats on " + ( prefix == "RELAXED" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
+						PrintToChat( COLOR_PURPLE + "Points                        = " + COLOR_GREEN + TruncateFloat( player_profile[ Stats.points ].tofloat(), 1 ).tostring() );
 						PrintToChat( COLOR_BLUE + "Alien kills                   = " + COLOR_GREEN + player_profile[ Stats.killcount ] );
 						PrintToChat( COLOR_BLUE + "Alien kills by melee          = " + COLOR_GREEN + player_profile[ Stats.meleekills ] );
 						PrintToChat( COLOR_BLUE + "Hours spent in mission        = " + COLOR_GREEN + TruncateFloat( ( player_profile[ Stats.missiondecims ].tointeger() / 36000.0 ), 2 ).tostring() );
 						PrintToChat( COLOR_BLUE + "Total kilometers ran          = " + COLOR_GREEN + TruncateFloat( ( player_profile[ Stats.distancetravelled ].tointeger() / 10000.0 ), 2 ).tostring() );
 						PrintToChat( COLOR_BLUE + "Average meters ran per minute = " + COLOR_GREEN + TruncateFloat( ( 60 * ( ( 1.0 * player_profile[ Stats.distancetravelled ].tointeger() ) / ( 1.0 * player_profile[ Stats.missiondecims ].tointeger() ) ) ), 2 ).tostring() );
 						PrintToChat( COLOR_BLUE + "Fast reload fails             = " + COLOR_GREEN + player_profile[ Stats.reloadfail ] );
-						PrintToChat( COLOR_BLUE + "Total times got top1          = " + COLOR_GREEN + player_profile[ Stats.top1 ] );
-						PrintToChat( COLOR_BLUE + "Total times got top2          = " + COLOR_GREEN + player_profile[ Stats.top2 ] );
-						PrintToChat( COLOR_BLUE + "Total times got top3          = " + COLOR_GREEN + player_profile[ Stats.top3 ] );
+						PrintToChat( COLOR_BLUE + "Total times got 1st, 2nd, 3rd = " + COLOR_GREEN + player_profile[ Stats.top1 ] + COLOR_BLUE + ", " + COLOR_GREEN + player_profile[ Stats.top2 ] + COLOR_BLUE + ", " + COLOR_GREEN + player_profile[ Stats.top3 ] );
 					}
 					else
 					{
@@ -229,11 +265,11 @@ function OnGameEvent_player_say( params )
 				}
 				else
 				{
-					local strText = null;
-					if ( type == "nf+ngl" ) strText = COLOR_YELLOW + profile_length.tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + COLOR_BLUE + " maps completed " + COLOR_YELLOW + "without flamer and grenade launcher:";
-					if ( type == "nohit" ) 	strText = COLOR_YELLOW + profile_length.tostring() + "/" + g_fTotalMapCount.tostring() + " " + prefix + COLOR_BLUE + " maps completed " + COLOR_YELLOW + "without getting hit:";
+					local strText = "";
+					if ( type == "nf+ngl" ) strText = COLOR_GREEN + profile_length.tostring() + COLOR_YELLOW + "/" + COLOR_GREEN + GetTotalMapCount( prefix ).tostring() + " " + ( prefix == "RELAXED" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + " maps completed " + COLOR_GREEN + "without flamer and grenade launcher:";
+					if ( type == "nohit" ) 	strText = COLOR_GREEN + profile_length.tostring() + COLOR_YELLOW + "/" + COLOR_GREEN + GetTotalMapCount( prefix ).tostring() + " " + ( prefix == "RELAXED" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + " maps completed " + COLOR_GREEN + "without getting hit:";
 
-					PrintToChat( COLOR_BLUE + strText );
+					PrintToChat( strText );
 
 					for ( local i = 0; i < profile_length; ++i )
 					{
@@ -457,7 +493,7 @@ function OnGameEvent_player_say( params )
 								for ( local j = 0; j < 13 - name.len(); ++j )
 									spaces_name += " ";
 								
-								PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+								PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
 							}
 							
 							return;
@@ -474,7 +510,7 @@ function OnGameEvent_player_say( params )
 								for ( local j = 0; j < 13 - name.len(); ++j )
 									spaces_name += " ";
 								
-								PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+								PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
 							}
 							
 							return;
@@ -509,7 +545,7 @@ function OnGameEvent_player_say( params )
 									for ( local j = 0; j < 13 - name.len(); ++j )
 										spaces_name += " ";
 									
-									PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+									PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
 								}
 								
 								return;
@@ -529,7 +565,7 @@ function OnGameEvent_player_say( params )
 										for ( local j = 0; j < 13 - name.len(); ++j )
 											spaces_name += " ";
 										
-										PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+										PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
 									}
 									
 									return;
@@ -547,7 +583,7 @@ function OnGameEvent_player_say( params )
 										for ( local j = 0; j < 13 - name.len(); ++j )
 											spaces_name += " ";
 										
-										PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + leaderboard[i + 2] + " points" );
+										PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
 									}
 									
 									return;
@@ -564,7 +600,7 @@ function OnGameEvent_player_say( params )
 										for ( local j = 0; j < 13 - name.len(); ++j )
 											spaces_name += " ";
 										
-										PrintToChat( color + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + name + spaces_name + " - " + time + " - " + leaderboard[i + 2] + " points" );
+										PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
 									}
 									
 									return;
