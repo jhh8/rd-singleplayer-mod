@@ -8,7 +8,7 @@ It is meant to be installed for dedicated servers.
 # Game Modes
 - Ranked Relaxed Solo - difficulty is 1 player brutal, no tech requirement, any character completes the hack automatically.
 
-- Ranked Hardcore Solo - difficulty is 4 player brutal, no tech requirement, any character can hack but it's not automatic.
+- Ranked Hardcore Solo - difficulty is 4 player brutal, aliens speed is like on ASBI, no tech requirement, any character can hack but it's not automatic.
 
 # Map Points
 Completing a map puts the person into a leaderboard for that map and game mode.
