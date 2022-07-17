@@ -29,9 +29,9 @@ til6	|	rd-til6yanaurusmine			|		1200		|		5		|
 til7	|	rd-til7factory				|		1000		|		5		|
 til8	|	rd-til8comcenter			|		1000		|		4		|
 til9	|	rd-til9syntekhospital		|		1000		|		4		|
-lana1	|	rd-lan1_bridge				|		1200		|		7		|
+lana1	|	rd-lan1_bridge				|		1000		|		7		|
 lana2	|	rd-lan2_sewer				|		1200		|		4		|
-lana3	|	rd-lan3_maintenance			|		0900		|		7		|
+lana3	|	rd-lan3_maintenance			|		1200		|		7		|
 lana4	|	rd-lan4_vent				|		0900		|		7		|
 lana5	|	rd-lan5_complex				|		1000		|		7		|
 para1	|	rd-par1unexpected_encounter	|		0600		|		10		|
@@ -80,3 +80,7 @@ acc4	|	rd-acc4_confacility			|		0700		|		8		|
 acc5	|	rd-acc5_j5connector			|		0900		|		8		|
 acc6	|	rd-acc6_labruins			|		1200		|		5		|
 acc7	|	rd-acc_complex				|		1600		|		3		|
+deswarm	|	de_swarm					|		0600		|		0		|
+cd		|	crystal_destroyer_solo		|		1000		|		10		|
+naswai	|	reactor						|		1000		|		3		|
+ 
