@@ -436,14 +436,14 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 
 	if ( g_bPointsChanged )
 	{
-		if ( g_stat_prev_points > g_stat_new_points )
+		if ( g_stat_prev_points - 0.001 > g_stat_new_points )
 		{
 			DelayCodeExecution( "PrintToChat( \"ERROR: Player has lost points after completing the map somehow (\" + g_stat_prev_points.tostring() + \" -> \" + g_stat_new_points + \") not changing points.\" );", 0.02 );
 		}
 		else if ( g_stat_prev_points != g_stat_new_points )
 		{
 			player_profile[ Stats.points ] = g_stat_new_points.tostring();
-			DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_GREEN + \"(+\" ( g_stat_new_points - g_stat_prev_points ).tostring() + \")\" + COLOR_BLUE + \"!\" );", 0.02 );
+			DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_GREEN + \"(+\" + ( g_stat_new_points - g_stat_prev_points ).tostring() + \")\" + COLOR_BLUE + \"!\" );", 0.02 );
 		}
 	}
 
