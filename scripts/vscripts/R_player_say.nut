@@ -133,14 +133,7 @@ function OnGameEvent_player_say( params )
 		argv.push( "full" );
 		argc = 5;
 	}
-	
-	//if ( argc == 3 )
-	//{
-	//	if ( argv[1].tolower() == "run_code" )
-	//	{
-	//		DoEntFire( "asw_challenge_thinker", "runscriptcode", argv[2], 0, null, null );
-	//	}
-	//}
+
 	if ( argv[1] == "welcome" )
 	{
 		if ( argc == 2 )
@@ -152,6 +145,17 @@ function OnGameEvent_player_say( params )
 		if ( argv[2] == "no" )
 		{
 			local notwelcome_list = CleanList( split( FileToString( "r_notwelcome" ), "|" ) );
+			
+			// if already not welcome, dont add to list
+			foreach( index, _player in notwelcome_list )
+			{
+				if ( _player == caller_steam_id )
+				{
+					PrintToChat( COLOR_PURPLE + "Welcome message was already " + COLOR_RED + "disabled" + COLOR_PURPLE + "." );
+					return;
+				}
+			}
+			
 			notwelcome_list.push( caller_steam_id );
 			WriteFile( "r_notwelcome", notwelcome_list, "|", 1, "" );
 			PrintToChat( COLOR_PURPLE + "Welcome message " + COLOR_RED + "disabled" + COLOR_PURPLE + "." );
