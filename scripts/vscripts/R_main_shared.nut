@@ -45,6 +45,8 @@ g_stat_missiondecims <- 0;
 g_stat_distancetravelled <- 0;
 g_stat_reloadfail <- 0;
 
+g_bIsMapspawn <- false;
+
 g_fTimeStart <- 0;
 g_vecPrevCoordinates <- Vector();
 
@@ -148,6 +150,40 @@ function InitializeSplits()
 			hObjective.ConnectOutput( "OnObjectiveComplete", "CallParentFunc" );
 		}
 	}
+	
+	// do same for trigger_teleport entities
+	local strTeleportName = ["room 1", "room 2", "room 3", "room 4", "room 5", "room 5 exit", "Portal 1 entrance trig", "Portal 2 entrance trig"];
+	
+	local hTeleport = null;
+	while( hTeleport = Entities.FindByClassname( hTeleport, "trigger_teleport" ) ) 
+	{
+		local bValidTP = false;
+		
+		foreach( str_name in strTeleportName )
+		{
+			if ( str_name == hTeleport.GetName() )
+			{
+				bValidTP = true;
+				break;
+			}
+		}
+		
+		if ( !bValidTP )
+			continue;
+		
+		hTeleport.ValidateScriptScope();
+
+		local Scope = hTeleport.GetScriptScope();
+		Scope.CallParentFunc <- function()
+		{	
+			local Scope_ChallengeThinker = Entities.FindByClassname( null, "asw_challenge_thinker" ).GetScriptScope();
+			Scope_ChallengeThinker.OnObjectiveCompleted( self );
+				
+			self.DisconnectOutput( "OnStartTouch", "CallParentFunc" );
+		}
+
+		hTeleport.ConnectOutput( "OnStartTouch", "CallParentFunc" );
+	}
 
 	// extract splits
 	local splits_list = CleanList( split( FileToString( FILENAME_SPLITS ), "|" ) );
@@ -188,6 +224,7 @@ function WriteSplits()
 	WriteFile( FILENAME_SPLITS, cursplits_list, "|", 2, "" );
 }
 
+g_iTeleporterNumber <- 0;
 function OnObjectiveCompleted( hObjective )
 {	
 	if ( g_bMissionComplete )
@@ -443,7 +480,7 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 		else if ( g_stat_prev_points != g_stat_new_points )
 		{
 			player_profile[ Stats.points ] = g_stat_new_points.tostring();
-			DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_GREEN + \"(+\" + ( g_stat_new_points - g_stat_prev_points ).tostring() + \")\" + COLOR_BLUE + \"!\" );", 0.02 );
+			DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_GREEN + \" (+\" + TruncateFloat( ( g_stat_new_points - g_stat_prev_points ), 2 ).tostring() + \")\" + COLOR_BLUE + \"!\" );", 0.02 );
 		}
 	}
 
