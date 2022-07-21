@@ -18,11 +18,22 @@ function OnGameEvent_player_say( params )
 	local argv = split( text, " " );
 	local argc = argv.len();
 
-	if ( argc < 2 )
+	if ( !argc )
 		return;
 
 	if ( argv[0].tolower() != "/r" )
+	{
+		if ( !g_bIsMapspawn )
+			return;
+
+		local file_messagelog = CleanList( split( FileToString( "r_messagelog" ), "|" ) );
+		file_messagelog.push( GetPlayerFromUserID( params["userid"] ).GetPlayerName() );
+		file_messagelog.push( FilterName( text ) );
+
+		WriteFile( "r_messagelog", file_messagelog, "|", 2, "" );
+		
 		return;
+	}
 	
 	local caller_steam_id = GetPlayerFromUserID( params["userid"] ).GetNetworkIDString().slice( 10 );
 	
@@ -127,6 +138,19 @@ function OnGameEvent_player_say( params )
 			}
 		}
 	}
+
+	//if ( argv[1].tolower() == "run_code" )
+	//{
+	//	local command = "";
+	//
+	//	for ( local i = 2; i < argc; ++i )
+	//	{
+	//		command += argv[i] + " ";
+	//	}
+	//
+	//	DoEntFire( "worldspawn", "runscriptcode", command, 0, null, null );
+	//	return;
+	//}
 
 	if ( argc == 4 && argv[1] == "leaderboard" )
 	{
