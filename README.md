@@ -32,6 +32,9 @@ The mod tracks some general stats for each player on each game mode. For example
 
 There is also a seperate leaderboard for amount of maps completed without getting hit and without using a flamer and grenade launcher. Once a person completes a map without getting hit or using flamer and grenade launcher, they get notified in chat about that.
 
+# Admins
+There is a file called r_adminlist which contains steamid's of admins. What admins can do is execute commands with /r_admin prefix.
+
 # Chat Commands
 All that information about stats and leaderboards has to be accessed somehow, for that there are chat commands.
 
