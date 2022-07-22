@@ -21,13 +21,13 @@ function OnGameEvent_player_say( params )
 	if ( !argc )
 		return;
 
-	if ( argv[0].tolower() != "/r" )
+	if ( argv[0].tolower() != "/r" && argv[0].tolower() != "/r_admin" )
 	{
 		if ( !g_bIsMapspawn )
 			return;
 
 		local file_messagelog = CleanList( split( FileToString( "r_messagelog" ), "|" ) );
-		file_messagelog.push( GetPlayerFromUserID( params["userid"] ).GetPlayerName() );
+		file_messagelog.push( FilterName( GetPlayerFromUserID( params["userid"] ).GetPlayerName() ) );
 		file_messagelog.push( FilterName( text ) );
 
 		WriteFile( "r_messagelog", file_messagelog, "|", 2, "" );
@@ -37,6 +37,81 @@ function OnGameEvent_player_say( params )
 	
 	local caller_steam_id = GetPlayerFromUserID( params["userid"] ).GetNetworkIDString().slice( 10 );
 	
+	if ( argv[0].tolower() == "/r_admin" )
+	{
+		if ( argc == 3 )
+		{
+			local admin_list = CleanList( split( FileToString( "r_adminlist" ), "|" ) );
+			for ( local i = 0; i < admin_list.len(); ++i )
+			{
+				if ( admin_list[i] == caller_steam_id )
+				{
+					// admin typed this
+					switch ( argv[1].tolower() )
+					{
+						case "rebuild_all_leaderboards":		// warning: SQQuerySuspend is a bitch, use carefully. it might rebuild only a small percentage of leaderboards when theres a lot. todo: figure out a bypass or an optimization...
+						{
+							if ( argv[2].tolower() == "relaxed" )
+							{
+								local maps_info = CleanList( split( FileToString( "r_rs_mapratings" ), "|" ) );
+
+								if ( maps_info.len() == 0 )
+									return;
+
+								maps_info.remove( 0 );	// remove the comment
+
+								if ( !ValidArray( maps_info, 4 ) )
+								{
+									PrintToChat( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring() );
+									return;
+								}
+
+								for ( local i = 0; i < maps_info.len(); i += 4 )
+									if ( BuildLeaderboard( "rs", maps_info[i], maps_info[i+2].tointeger(), maps_info[i+3].tointeger() )[0] == -9 )
+										return; 
+
+								PrintToChat( COLOR_GREEN + "Succesfully rebuilt all leaderboards for relaxed mode." );
+							}
+							else if ( argv[2].tolower() == "hardcore" )
+							{
+								local maps_info = CleanList( split( FileToString( "r_hs_mapratings" ), "|" ) );
+
+								if ( maps_info.len() == 0 )
+									return;
+
+								maps_info.remove( 0 );	// remove the comment
+
+								if ( !ValidArray( maps_info, 4 ) )
+								{
+									PrintToChat( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring() );
+									return;
+								}
+
+								for ( local i = 0; i < maps_info.len(); i += 4 )
+									if ( BuildLeaderboard( "hs", maps_info[i], maps_info[i+2].tointeger(), maps_info[i+3].tointeger() )[0] == -9 )
+										return; 
+
+								PrintToChat( COLOR_GREEN + "Succesfully rebuilt all leaderboards for hardcore mode." );
+							}
+							else 
+							{
+								PrintToChat( "Expected argument 2 to be relaxed or hardcore" );
+							}
+						}
+					}
+
+					return;
+				}
+			}
+
+			PrintToChat( "Admin command tried being executed by non-admin" );
+			return;
+		}
+
+		PrintToChat( "Unrecognised admin command" );
+		return;
+	}
+
 	if ( argc == 2 )
 	{
 		switch( argv[1].tolower() )

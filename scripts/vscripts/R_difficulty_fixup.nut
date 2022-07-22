@@ -54,7 +54,7 @@ if ( cur_difficulty <= 3 )
 		if ( max <= 3 )
 		{
 			NetProps.SetPropInt( hSpawner, "m_iMinSkillLevel", 4 );
-			NetProps.SetPropInt( hSpawner, "m_iMaxSkillLevel", 5 );
+			NetProps.SetPropInt( hSpawner, "m_iMinSkillLevel", 5 );
 			continue;
 		}
 		

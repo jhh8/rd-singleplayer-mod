@@ -1,5 +1,6 @@
 IncludeScript( "R_useful_funcs.nut" );
 IncludeScript( "R_chatcolors.nut" );
+IncludeScript( "R_leaderboard_logic.nut" );
 IncludeScript( "R_player_say.nut" );
 
 const FILENAME_PLAYERLIST = "r_playerlist";
@@ -68,7 +69,6 @@ function SetWorldSpawnScope()
 	{
 		local file_messagelog = CleanList( split( FileToString( "r_messagelog" ), "|" ) );
 		local file_len = file_messagelog.len();
-		local bInCurrentServer = false;
 
 		if ( file_len != 0 )
 		{
@@ -77,18 +77,29 @@ function SetWorldSpawnScope()
 				g_strLastMessage <- file_messagelog[ file_len - 1 ];
 				g_strLastPlayer <- file_messagelog[ file_len - 2 ];
 				
-				local hPlayer = null;
-				while ( hPlayer = Entities.FindByClassname( hPlayer, "player" ) )
+				if ( g_strLastPlayer.len() > 16 )
 				{
-					if ( hPlayer.GetPlayerName() == file_messagelog[ file_len - 2 ] )
+					if ( g_strLastPlayer.slice( 0, 17 ) == "MessageBroadcast_" )
 					{
-						bInCurrentServer = true;
-						break;
+						// name already filtered
+						local player_name = g_strLastPlayer.slice( 17 );
+
+						local _hPlayer = null;
+						while ( _hPlayer = Entities.FindByClassname( _hPlayer, "player" ) )
+							if ( FilterName( _hPlayer.GetPlayerName() ) == player_name )
+								return 0.1;
+
+						PrintToChat( g_strLastMessage );
+						return 0.1;
 					}
 				}
-				
-				if ( !bInCurrentServer )
-					PrintToChat( COLOR_PURPLE + file_messagelog[ file_len - 2 ] + COLOR_LIGHTBLUE + ": " + file_messagelog[ file_len - 1 ] );
+
+				local hPlayer = null;
+				while ( hPlayer = Entities.FindByClassname( hPlayer, "player" ) )
+					if ( FilterName( hPlayer.GetPlayerName() ) == g_strLastPlayer )
+						return 0.1;
+
+				PrintToChat( COLOR_PURPLE + g_strLastPlayer + COLOR_LIGHTBLUE + ": " + g_strLastMessage );
 			}
 		}
 

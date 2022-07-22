@@ -1,3 +1,16 @@
+enum Stats {
+	version,
+	points,
+	killcount,
+	meleekills,
+	missiondecims,
+	distancetravelled,
+	reloadfail,
+	top1,
+	top2,
+	top3
+}
+
 // mode is "rs" or "hs", data is one player's steamid and time (data len == 2), bForceBuild == false when the function is called by completing a mission
 // returns an array of three numbers. first one is previous placement, second one is new placement, third one is time improvement.
 // returns 0 if that person doesnt have an entry on the leaderboard, returns -1 if that person does have an entry but didnt improve his placement
@@ -14,7 +27,7 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 	if ( !ValidArray( leaderboard, 3 ) )
 	{
 		PrintToChat( COLOR_RED + "Internal ERROR: BuildLeaderboard: leaderboard array has invalid length = " + leaderboard.len().tostring() );
-		return;
+		return [-9, -9, -9];
 	}
 
 	if ( leaderboard.len() != 0 )
@@ -84,33 +97,13 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 			return [ -1, -1, -1 ];
 
 		WriteFile( filename, output_leaderboard, "|", 3, "" );
+		
+		// just in case always write points to all players
+		for ( local i = 0; i < output_leaderboard.len(); i += 3 )
+			WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+2] );
 
 		if ( caller_steamid )
-		{
-			// player just got or improved his WR, write the points changed to everybody's profile in that leaderboard
-			if ( output_leaderboard[0] == caller_steamid )
-			{
-				for ( local i = 0; i < output_leaderboard.len(); i += 3 )
-					WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+2] );
-			}
-			else if ( output_leaderboard[3] == caller_steamid )
-			{	// the player improved or got their second place, which means the first player's points could have changed, output_leaderboard[0] = first player's steam id
-				WritePlayersPoints( output_leaderboard[0], mode, map_name, output_leaderboard[2] );
-				WritePlayersPoints( caller_steamid, mode, map_name, output_leaderboard[5] );
-			}
-			else
-			{	
-				if ( prev_placement == 0 )
-				{	// player got his first entry, everybody's points will change
-					for ( local i = 0; i < output_leaderboard.len(); i += 3 )
-						WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+2] );
-				}
-				else	// player improved time and/or got a new placement which is top3 or worse, this will only affect their points
-				{
-					WritePlayersPoints( caller_steamid, mode, map_name, output_leaderboard[ new_placement * 3 - 1 ] );
-				}
-			}
-			
+		{	
 			if ( prev_placement != 0 && new_placement >= prev_placement )
 				return [ -1, -1, previous_time - data[1] ];
 
@@ -129,7 +122,7 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 {
 	local precision_list = CleanList( split( FileToString( "r_precision_list" ), "|" ) );
 
-	if ( precision_list.len() != 12 )
+	if ( precision_list.len() != 13 )
 	{
 		PrintToChat( COLOR_RED + "Internal ERROR: CalculateLeaderboard: precision list is wrong length = " + precision_list.len().tostring() );
 		return null;
@@ -140,8 +133,9 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 	local lb_positions = [];
 	local output = [];
 	local lb_length = leaderboard.len();
-	local map_rating_advanced = map_rating * pow( lb_length / 2, 0.2 );
+	local map_rating_advanced = map_rating * pow( lb_length / 2, precision_list[12].tofloat() );
 	local precision_multiplier = precision_list[ map_precision ].tofloat();
+	local pos_reltime_relevance = 1.0 / pow( 1.0 / ( 1.0 - precision_multiplier ), 0.1 );
 	local time_WR = 0;
 
 	if ( lb_length != 0 )
@@ -166,14 +160,13 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 	{
 		local points = 0;
 		local reltime = !i && lb_length > 2 ? leaderboard[3] / time_WR : time_WR / leaderboard[i+1];
+		reltime = pow( reltime, pos_reltime_relevance );
 
 		// dont get too crazy now
 		if ( reltime > reltime_overload )
 			reltime = reltime_overload;
 
-		// xonotic defrag world championship system is - SCORE = 1000 * (time_of_the_fastest_competitor/your_time) * 0.988 ^ (pos - 1)
-		// my system is - SCORE = <map_rating> * (<player_count> ^ 0.2) * (time_of_the_fastest_competitor/your_time) * <precision_multiplier> ^ (pos - 1)
-		points = map_rating_advanced * reltime * pow( precision_multiplier, pow( lb_positions[i/2] - 1, 1.0 ) );
+		points = map_rating_advanced * pow( reltime, pos_reltime_relevance ) * pow( precision_multiplier, pow( lb_positions[i/2] - 1, pos_reltime_relevance ) );
 		if ( points < map_rating )
 			points = map_rating;
 
@@ -255,7 +248,7 @@ function CalculatePlayersGeneralPoints( steamid, mode )
 		for ( local j = increment * i, maps_count = 1; j < profile_length && maps_count <= increment / 2; j += 2, ++maps_count )
 			points += profile_points[j + 1].tofloat() / ( increment * ( pow( 2, i ) ) );
 
-	if ( steamid == g_steam_id )
+	if ( steamid == GetPlayerSteamID() )
 	{	// points will be written to general profile in UpdatePlayerData function
 		g_bPointsChanged <- true;
 		g_stat_new_points <- points;

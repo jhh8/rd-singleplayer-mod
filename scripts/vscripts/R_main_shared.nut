@@ -104,86 +104,31 @@ function OnGameplayStart()
 	}
 
 	g_bCheckedMap <- true;
-
-	/*// testing
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "108718913", "47.166" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "2", "47.25" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "3", "47.583" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "4", "47.816" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "5", "48.683" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "6", "48.733" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "7", "49.966" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "8", "50.1" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "9", "50.616" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "10", "51.883" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "11", "52.000" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "12", "53.566" ] );
-	BuildLeaderboard( "rs", "para1", 600, 10, true, [ "13", "57.216" ] );
-	*/
 }
 
 function InitializeSplits()
 {
-	// make every objective call OnObjectiveCompleted in challenge thinkers scope
 	local strArrayObjectiveName 	= 	["asw_objective_triggered", "asw_objective_escape", "asw_objective_destroy_goo", "asw_objective_kill_eggs", 
 										"asw_objective_countdown", "asw_objective_kill_aliens", "asw_objective_survive", "asw_objective_dummy"];
 	foreach ( str_classname in strArrayObjectiveName )
-	{
-		local hObjective = null;
-		while( hObjective = Entities.FindByClassname( hObjective, str_classname ) ) 
-		{
-			hObjective.ValidateScriptScope();
+		CreateSplitPoints( str_classname, [], "OnObjectiveComplete" );
 
-			local Scope = hObjective.GetScriptScope();
-			Scope.CallParentFunc <- function()
-			{
-				local Scope_ChallengeThinker = Entities.FindByClassname( null, "asw_challenge_thinker" ).GetScriptScope();
-				Scope_ChallengeThinker.OnObjectiveCompleted( self );
-
-				// problems if two objectives get completed at same time
-				//::g_hCurrentObjective <- self;
-				//DoEntFire( "asw_challenge_thinker", "RunScriptCode", "OnObjectiveCompleted( g_hCurrentObjective )", 0, null, null );
-				
-				self.DisconnectOutput( "OnObjectiveComplete", "CallParentFunc" );
-			}
-
-			hObjective.ConnectOutput( "OnObjectiveComplete", "CallParentFunc" );
-		}
-	}
-	
-	// do same for trigger_teleport entities
-	local strTeleportName = ["room 1", "room 2", "room 3", "room 4", "room 5", "room 5 exit", "Portal 1 entrance trig", "Portal 2 entrance trig"];
-	
-	local hTeleport = null;
-	while( hTeleport = Entities.FindByClassname( hTeleport, "trigger_teleport" ) ) 
-	{
-		local bValidTP = false;
-		
-		foreach( str_name in strTeleportName )
-		{
-			if ( str_name == hTeleport.GetName() )
-			{
-				bValidTP = true;
-				break;
-			}
-		}
-		
-		if ( !bValidTP )
-			continue;
-		
-		hTeleport.ValidateScriptScope();
-
-		local Scope = hTeleport.GetScriptScope();
-		Scope.CallParentFunc <- function()
-		{	
-			local Scope_ChallengeThinker = Entities.FindByClassname( null, "asw_challenge_thinker" ).GetScriptScope();
-			Scope_ChallengeThinker.OnObjectiveCompleted( self );
-				
-			self.DisconnectOutput( "OnStartTouch", "CallParentFunc" );
-		}
-
-		hTeleport.ConnectOutput( "OnStartTouch", "CallParentFunc" );
-	}
+	// crystal destroyter and de_swarm split areas
+	CreateSplitPoints( "trigger_teleport", ["room 1", "room 2", "room 3", "room 4", "room 5", "room 5 exit", "Portal 1 entrance trig", "Portal 2 entrance trig"], "OnStartTouch" );
+	// split areas:                            landing bay
+	CreateSplitPoints( "trigger_asw_chance", ["RandomSpawn5"], "OnTrigger" );
+	// split areas:                         cargo elevator
+	CreateSplitPoints( "trigger_once", ["ElevatorShaftTrigger"], "OnTrigger" );
+	// split areas:                                      deima
+	CreateSplitPoints( "trigger_asw_button_area", ["openBridgeButton2"], "OnButtonHackCompleted" );
+	// split areas:                                      rydberg             rydberg              residential
+	CreateSplitPoints( "trigger_asw_button_area", ["reactor_button2", "exit_door_button_area", "ElevatorButtons"], "OnButtonActivated" );
+	// split areas:                          sewer
+	CreateSplitPoints( "asw_spawner", ["exit_mortar_spawner"], "OnSpawned" );
+	// split areas:                         sewer
+	CreateSplitPoints( "math_counter", ["BeamCounter"], "OnHitMax" );
+	// split areas:                            timor
+	CreateSplitPoints( "func_door_rotating", ["Bridge"], "OnOpen" );
 
 	// extract splits
 	local splits_list = CleanList( split( FileToString( FILENAME_SPLITS ), "|" ) );
@@ -209,6 +154,42 @@ function InitializeSplits()
 	}
 }
 
+// connects split points in specified entities. if valid names array length is 0, any entity name is valid
+function CreateSplitPoints( string_entityclassname, array_validnames, string_outputname )
+{
+	local hEntity = null;
+	while( hEntity = Entities.FindByClassname( hEntity, string_entityclassname ) ) 
+	{
+		local bValidEntity = array_validnames.len() == 0 ? true : false;
+		
+		foreach( str_name in array_validnames )
+		{
+			if ( str_name == hEntity.GetName() )
+			{
+				bValidEntity = true;
+				break;
+			}
+		}
+		
+		if ( !bValidEntity )
+			continue;
+
+		hEntity.ValidateScriptScope();
+
+		local Scope = hEntity.GetScriptScope();
+		Scope.string_outputname <- string_outputname;
+		Scope.CallParentFunc <- function()
+		{	
+			local Scope_ChallengeThinker = Entities.FindByClassname( null, "asw_challenge_thinker" ).GetScriptScope();
+			Scope_ChallengeThinker.OnSplitReached( self );
+				
+			self.DisconnectOutput( string_outputname, "CallParentFunc" );
+		}
+
+		hEntity.ConnectOutput( string_outputname, "CallParentFunc" );
+	}
+}
+
 function WriteSplits()
 {
 	local cursplits_list = [];	
@@ -224,13 +205,12 @@ function WriteSplits()
 	WriteFile( FILENAME_SPLITS, cursplits_list, "|", 2, "" );
 }
 
-g_iTeleporterNumber <- 0;
-function OnObjectiveCompleted( hObjective )
+function OnSplitReached( hEntity )
 {	
 	if ( g_bMissionComplete )
 		return;
 	
-	local strObjectiveName = hObjective.GetName() == "" ? hObjective.GetClassname() : hObjective.GetName();
+	local strObjectiveName = hEntity.GetName() == "" ? hEntity.GetClassname() : hEntity.GetName();
 	
 	g_tCurObjectiveTimes[ strObjectiveName ] <- Time() - g_fTimeStart;
 
@@ -239,7 +219,7 @@ function OnObjectiveCompleted( hObjective )
 
 	if ( !g_tWRObjectiveTimes.rawin( strObjectiveName ) )
 	{
-		PrintToChat( "ERROR: Current WR does not have this objective completed! wut" );
+		//PrintToChat( "ERROR: Current WR does not have this objective completed! wut" );
 		return;
 	}
 
@@ -350,19 +330,28 @@ function OnGameEvent_mission_success( params )
 
 	UpdatePlayerData( 1, placements[1] );
 
-	PrintToChat( COLOR_YELLOW + "map " + COLOR_GREEN + g_strCurMap + COLOR_YELLOW + ", mode " + ( g_strPrefix == "hs" ? ( COLOR_RED + "hardcore:" ) : ( COLOR_GREEN + "relaxed:" ) ) );
+	PrintToChat( COLOR_YELLOW + "MAP " + COLOR_GREEN + g_strCurMap + COLOR_YELLOW + ", MODE " + ( g_strPrefix == "hs" ? ( COLOR_RED + "HARDCORE:" ) : ( COLOR_GREEN + "RELAXED:" ) ) );
 
 	if ( placements[0] != -1 )
 	{
 		if ( placements[0] <= 0 )
+		{
 			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has placed " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + " on their first run!" );
+			BroadcastMessage( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " has placed " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + " on their first run!", true );
+		}
 		else if ( placements[1] < placements[0] )
+		{
 			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved by " + COLOR_GREEN + TruncateFloat( placements[2], 2 ).tostring() + COLOR_BLUE + " seconds and placed from " + COLOR_GREEN + placements[0].tostring() + COLOR_BLUE + " to " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + "!" );
+			BroadcastMessage( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved by " + COLOR_GREEN + TruncateFloat( placements[2], 2 ).tostring() + COLOR_BLUE + " seconds and placed from " + COLOR_GREEN + placements[0].tostring() + COLOR_BLUE + " to " + COLOR_GREEN + placements[1].tostring() + COLOR_BLUE + "!", true );
+		}
 	}
 	else
 	{
 		if ( placements[2] != -1 )
+		{
 			PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved their record by " + COLOR_GREEN + TruncateFloat( placements[2], 2 ).tostring() + COLOR_BLUE + " seconds!" );
+			BroadcastMessage( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + " improved their record by " + COLOR_GREEN + TruncateFloat( placements[2], 2 ).tostring() + COLOR_BLUE + " seconds!", true );
+		}
 	}
 
 	if ( completion_time < g_fWRTime )

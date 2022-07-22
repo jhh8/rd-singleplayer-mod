@@ -31,6 +31,19 @@ function GetCurrentMapInfo()
 	}
 }
 
+// broadcast a message to other servers. second parameter true means map name and game mode will be included in the beginning of the message
+function BroadcastMessage( message, bMissionCompletion = false )
+{
+	if ( bMissionCompletion )
+		message = ( COLOR_YELLOW + "MAP " + COLOR_GREEN + g_strCurMap + COLOR_YELLOW + ", MODE " + ( g_strPrefix == "hs" ? ( COLOR_RED + "HARDCORE: " ) : ( COLOR_GREEN + "RELAXED: " ) ) ) + "\n" + message;
+
+	local file_messagelog = CleanList( split( FileToString( "r_messagelog" ), "|" ) );
+	file_messagelog.push( "MessageBroadcast_" + FilterName( g_hPlayer.GetPlayerName() ) );	// someone will use this as their steam name wont they
+	file_messagelog.push( FilterName( message ) );
+
+	WriteFile( "r_messagelog", file_messagelog, "|", 2, "" );
+}
+
 function IsHardcore()
 {
 	return Convars.GetStr( "rd_challenge" ) == "R_HS" ? true : false;
@@ -155,7 +168,7 @@ function CleanList( list )
 }
 
 function WriteFile( file_name, data, str_delimiter, data_per_line, compiled_string_initialize )
-{
+{	
 	local compiled_string = compiled_string_initialize;
 	
 	for ( local i = 0; i < data.len(); i += data_per_line )
@@ -171,6 +184,8 @@ function WriteFile( file_name, data, str_delimiter, data_per_line, compiled_stri
 		}
 	}
 	
+	compiled_string += "eof";
+
 	StringToFile( file_name, compiled_string );
 }
 
@@ -230,7 +245,7 @@ function DelayFunctionCall( function_name, function_params, delay )
 {
 	if ( !this["self"] )
 		return;
-	
+
 	// this[ function_name ]( function_params );
 	EntFireByHandle( this["self"], "RunScriptCode", "this[\"" + function_name + "\"](" + function_params + ");", delay, null, null );
 }
