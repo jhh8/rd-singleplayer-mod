@@ -122,7 +122,7 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 {
 	local precision_list = CleanList( split( FileToString( "r_precision_list" ), "|" ) );
 
-	if ( precision_list.len() != 13 )
+	if ( precision_list.len() != 14 )
 	{
 		PrintToChat( COLOR_RED + "Internal ERROR: CalculateLeaderboard: precision list is wrong length = " + precision_list.len().tostring() );
 		return null;
@@ -133,7 +133,8 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 	local lb_positions = [];
 	local output = [];
 	local lb_length = leaderboard.len();
-	local map_rating_advanced = map_rating * pow( lb_length / 2, precision_list[12].tofloat() );
+	// want the map_rating_advanced to grow slower on harder maps
+	local map_rating_advanced = map_rating * pow( ( precision_list[13].tofloat() / map_rating ) * lb_length / 2, precision_list[12].tofloat() );
 	local precision_multiplier = precision_list[ map_precision ].tofloat();
 	local pos_reltime_relevance = 1.0 / pow( 1.0 / ( 1.0 - precision_multiplier ), 0.1 );
 	local time_WR = 0;
