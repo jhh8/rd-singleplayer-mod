@@ -1,4 +1,4 @@
-const g_fStatCount = 10;				// when adding more stats change this constant
+const g_fStatCount = 12;				// when adding more stats change this constant
 enum Stats {
 	version,
 	points,
@@ -9,7 +9,9 @@ enum Stats {
 	reloadfail,
 	top1,
 	top2,
-	top3
+	top3,
+	wrequals,
+	points_nohit_nfngl
 }
 
 function OnGameEvent_player_say( params )
@@ -19,6 +21,9 @@ function OnGameEvent_player_say( params )
 	local argc = argv.len();
 
 	if ( !argc )
+		return;
+
+	if ( !GetPlayerFromUserID( params["userid"] ) )
 		return;
 
 	if ( argv[0].tolower() != "/r" && argv[0].tolower() != "/r_admin" )
@@ -39,72 +44,152 @@ function OnGameEvent_player_say( params )
 	
 	if ( argv[0].tolower() == "/r_admin" )
 	{
+		local bIsAdmin = false;
+
+		local admin_list = CleanList( split( FileToString( "r_adminlist" ), "|" ) );
+		for ( local i = 0; i < admin_list.len(); ++i )
+			if ( admin_list[i] == caller_steam_id )
+				bIsAdmin = true;
+		
+		if ( !bIsAdmin )
+		{
+			PrintToChat( "Admin command tried being executed by non-admin" );
+			return;
+		}
+
 		if ( argc == 3 )
 		{
-			local admin_list = CleanList( split( FileToString( "r_adminlist" ), "|" ) );
-			for ( local i = 0; i < admin_list.len(); ++i )
+			switch ( argv[1].tolower() )
 			{
-				if ( admin_list[i] == caller_steam_id )
+				case "rebuild_all_leaderboards":
 				{
-					// admin typed this
-					switch ( argv[1].tolower() )
+					if ( argv[2].tolower() == "relaxed" )
 					{
-						case "rebuild_all_leaderboards":		// warning: SQQuerySuspend is a bitch, use carefully. it might rebuild only a small percentage of leaderboards when theres a lot. todo: figure out a bypass or an optimization...
+						maps_info <- CleanList( split( FileToString( "r_rs_mapratings" ), "|" ) );
+
+						if ( maps_info.len() == 0 )
+							return;
+
+						maps_info.remove( 0 );	// remove the comment
+
+						if ( !ValidArray( maps_info, 4 ) )
 						{
-							if ( argv[2].tolower() == "relaxed" )
+							LogError( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring(), argv[2] );
+							return;
+						}
+						
+						local delay_per_map = 0.02;	// bypass SQQuerySuspend
+						PrintToChat( "Process will take " + ( maps_info.len() * delay_per_map / 4.0 ).tostring() + " seconds, please do not interrupt the process." );
+						for ( local i = 0; i < maps_info.len(); i += 4 )
+							DelayCodeExecution( "::BuildLeaderboard( \"rs\", maps_info[" + i.tostring() + "], maps_info[" + i.tostring() + "+2].tointeger(), maps_info[" + i.tostring() + "+3].tointeger() )", ( delay_per_map * i / 4.0 ), "worldspawn" );
+
+						// we cant really figure out if the process was successfull or not
+						DelayCodeExecution( "::PrintToChat( COLOR_GREEN + \"Process ended.\" )", ( maps_info.len() * delay_per_map / 4.0 ), "worldspawn" );
+					}
+					else if ( argv[2].tolower() == "hardcore" )
+					{
+						maps_info <- CleanList( split( FileToString( "r_hs_mapratings" ), "|" ) );
+
+						if ( maps_info.len() == 0 )
+							return;
+
+						maps_info.remove( 0 );	// remove the comment
+
+						if ( !ValidArray( maps_info, 4 ) )
+						{
+							LogError( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring(), argv[2] );
+							return;
+						}
+
+						local delay_per_map = 0.02;	// bypass SQQuerySuspend
+						PrintToChat( "Process will take " + ( maps_info.len() * delay_per_map / 4.0 ).tostring() + " seconds, please do not interrupt the process." );
+						for ( local i = 0; i < maps_info.len(); i += 4 )
+							DelayCodeExecution( "::BuildLeaderboard( \"hs\", maps_info[" + i.tostring() + "], maps_info[" + i.tostring() + "+2].tointeger(), maps_info[" + i.tostring() + "+3].tointeger() )", ( delay_per_map * i / 4.0 ), "worldspawn" );
+
+						// we cant really figure out if the process was successfull or not
+						DelayCodeExecution( "::PrintToChat( COLOR_GREEN + \"Process ended.\" )", ( maps_info.len() * delay_per_map / 4.0 ), "worldspawn" );
+					}
+					else 
+					{
+						PrintToChat( "Expected argument 2 to be relaxed or hardcore" );
+					}
+
+					return;
+				}
+				case "read":
+				{
+					switch ( argv[2].tolower() )
+					{
+						case "feedback":
+						{
+							local feedback_list = CleanList( split( FileToString( "r_feedback" ), "|" ) );
+							local feedback_count = feedback_list.len();
+
+							if ( feedback_count == 0 )
 							{
-								local maps_info = CleanList( split( FileToString( "r_rs_mapratings" ), "|" ) );
-
-								if ( maps_info.len() == 0 )
-									return;
-
-								maps_info.remove( 0 );	// remove the comment
-
-								if ( !ValidArray( maps_info, 4 ) )
-								{
-									PrintToChat( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring() );
-									return;
-								}
-
-								for ( local i = 0; i < maps_info.len(); i += 4 )
-									if ( BuildLeaderboard( "rs", maps_info[i], maps_info[i+2].tointeger(), maps_info[i+3].tointeger() )[0] == -9 )
-										return; 
-
-								PrintToChat( COLOR_GREEN + "Succesfully rebuilt all leaderboards for relaxed mode." );
+								PrintToChat( "No feedback." );
+								return;
 							}
-							else if ( argv[2].tolower() == "hardcore" )
+
+							for ( local i = 0; i < feedback_count; ++i )
+								PrintToChat( feedback_list[i] );
+
+							break;
+						}
+						case "errorlog":
+						{
+							local error_list = CleanList( split( FileToString( "r_errorlog" ), "|" ) );
+							local error_count = error_list.len();
+
+							if ( error_count == 0 )
 							{
-								local maps_info = CleanList( split( FileToString( "r_hs_mapratings" ), "|" ) );
-
-								if ( maps_info.len() == 0 )
-									return;
-
-								maps_info.remove( 0 );	// remove the comment
-
-								if ( !ValidArray( maps_info, 4 ) )
-								{
-									PrintToChat( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring() );
-									return;
-								}
-
-								for ( local i = 0; i < maps_info.len(); i += 4 )
-									if ( BuildLeaderboard( "hs", maps_info[i], maps_info[i+2].tointeger(), maps_info[i+3].tointeger() )[0] == -9 )
-										return; 
-
-								PrintToChat( COLOR_GREEN + "Succesfully rebuilt all leaderboards for hardcore mode." );
+								PrintToChat( "No errors." );
+								return;
 							}
-							else 
-							{
-								PrintToChat( "Expected argument 2 to be relaxed or hardcore" );
-							}
+
+							for ( local i = 0; i < error_count; ++i )
+								PrintToChat( error_list[i] );
+
+							break;
+						}
+					}
+
+					return;
+				}
+				case "clear":
+				{
+					switch ( argv[2].tolower() )
+					{
+						case "feedback":
+						{
+							WriteFile( "r_feedback", [], "|", 1, "" );
+							PrintToChat( COLOR_GREEN + "Feedback cleared." );
+							break;
+						}
+						case "errorlog":
+						{
+							WriteFile( "r_errorlog", [], "|", 1, "" );
+							PrintToChat( COLOR_GREEN + "Error log cleared." );
+							break;
 						}
 					}
 
 					return;
 				}
 			}
+		}
 
-			PrintToChat( "Admin command tried being executed by non-admin" );
+		if ( argv[1].tolower() == "run_code" )
+		{
+			local command = "";
+			
+			for ( local i = 2; i < argc; ++i )
+			{
+				command += argv[i] + " ";
+			}
+				
+			DoEntFire( "worldspawn", "runscriptcode", command, 0, null, null );
+			PrintToChat( "Ran command - " + command );
 			return;
 		}
 
@@ -121,11 +206,19 @@ function OnGameEvent_player_say( params )
 				PrintToChat( COLOR_BLUE + "List of commands:" );
 				PrintToChat( COLOR_GREEN + "- /r profile " + COLOR_YELLOW + "[name/steamid]" + COLOR_RED + " [relaxed/hardcore]" + COLOR_YELLOW + " [general/points/nf+ngl/nohit]" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_RED + " [relaxed/hardcore]" + COLOR_YELLOW + " [mapname/nf+ngl/nohit/points]" + COLOR_RED + " [close/top/full]" );
+				PrintToChat( COLOR_GREEN + "- /r feedback " + COLOR_YELLOW + "[message]" + COLOR_BLUE + " - writes feedback for admins to read" );
 				PrintToChat( COLOR_GREEN + "- /r maplist" + COLOR_BLUE + " - prints a list of all supported maps" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_BLUE + " - prints current map's and challenge's leaderboard" );
 				PrintToChat( COLOR_GREEN + "- /r points" + COLOR_BLUE + " - prints current challenge's points leaderboard" );
 				PrintToChat( COLOR_GREEN + "- /r profile" + COLOR_BLUE + " - prints your current challenge's general profile" );
 				PrintToChat( COLOR_GREEN + "- /r welcome " + COLOR_YELLOW + "[yes/no]" + COLOR_BLUE + " - disable/enable welcome message for yourself" );
+				return;
+			}
+			case "adminhelp":
+			{
+				PrintToChat( COLOR_BLUE + "List of " + COLOR_RED + "ADMIN" + COLOR_BLUE + " commands:" );
+				PrintToChat( COLOR_GREEN + "- /r_admin rebuild_all_leaderboards " + COLOR_YELLOW + "[relaxed/hardcore]" + COLOR_BLUE + " - USE CAREFULLY" );
+				PrintToChat( COLOR_GREEN + "- /r_admin " + COLOR_YELLOW + "[read/clear]" + COLOR_RED + " [feedback/errorlog]" );
 				return;
 			}
 			case "maplist":
@@ -134,7 +227,7 @@ function OnGameEvent_player_say( params )
 
 				if ( map_list.len() == 0 || !ValidArray( map_list, 2 ) )
 				{
-					PrintToChat( "Internal ERROR: map_list has invalid length = " + map_list.len() );
+					LogError( "Internal ERROR: map_list has invalid length = " + map_list.len() );
 					return;
 				}
 
@@ -214,18 +307,24 @@ function OnGameEvent_player_say( params )
 		}
 	}
 
-	//if ( argv[1].tolower() == "run_code" )
-	//{
-	//	local command = "";
-	//
-	//	for ( local i = 2; i < argc; ++i )
-	//	{
-	//		command += argv[i] + " ";
-	//	}
-	//
-	//	DoEntFire( "worldspawn", "runscriptcode", command, 0, null, null );
-	//	return;
-	//}
+	if ( argv[1].tolower() == "feedback" )
+	{
+		local message = "";
+	
+		for ( local i = 2; i < argc; ++i )
+			message += argv[i] + " ";
+
+		message = FilterName( COLOR_PURPLE + GetPlayerFromUserID( params["userid"] ).GetPlayerName() + COLOR_YELLOW + ": " + message );
+
+		local feedback_list = CleanList( split( FileToString( "r_feedback" ), "|" ) );
+		feedback_list.push( message );
+
+		WriteFile( "r_feedback", feedback_list, "|", 1, "" );
+
+		PrintToChat( COLOR_GREEN + "Feedback sent." );
+
+		return;
+	}
 
 	if ( argc == 4 && argv[1] == "leaderboard" )
 	{
@@ -330,10 +429,25 @@ function OnGameEvent_player_say( params )
 				// yay we found a profile
 				if ( type == "general" )
 				{
+					// fixup for version 1 of profile
+					if ( player_profile[ Stats.version ].tointeger() == 1 )
+					{
+						player_profile.push( "0" );
+						player_profile.push( CalculatePlayersChallengePoints( ( g_tPlayerList.rawin( id ) ? id : GetKeyFromValue( g_tPlayerList, id ) ), prefix_short ) );
+						profile_length += 2;
+					}
+					
+					if ( player_profile[ Stats.version ].tointeger() == 2 )
+					{
+						player_profile.push( CalculatePlayersChallengePoints( ( g_tPlayerList.rawin( id ) ? id : GetKeyFromValue( g_tPlayerList, id ) ), prefix_short ) );
+						profile_length++;
+					}
+
 					if ( profile_length == g_fStatCount )
 					{
 						PrintToChat( COLOR_GREEN + ( g_tPlayerList.rawin( id ) ? g_tPlayerList[id] : id ) + COLOR_YELLOW + "'s general stats on " + ( prefix == "RELAXED" ? COLOR_GREEN : COLOR_RED ) + prefix + COLOR_YELLOW + ":" );
-						PrintToChat( COLOR_PURPLE + "Points                        = " + COLOR_GREEN + TruncateFloat( player_profile[ Stats.points ].tofloat(), 1 ).tostring() );
+						PrintToChat( COLOR_PURPLE + "Total Points                  = " + COLOR_GREEN + TruncateFloat( player_profile[ Stats.points ].tofloat(), 1 ).tostring() );
+						PrintToChat( COLOR_BLUE + "Points from nohit/nf+ngl maps = " + COLOR_GREEN + player_profile[ Stats.points_nohit_nfngl ] );
 						PrintToChat( COLOR_BLUE + "Alien kills                   = " + COLOR_GREEN + player_profile[ Stats.killcount ] );
 						PrintToChat( COLOR_BLUE + "Alien kills by melee          = " + COLOR_GREEN + player_profile[ Stats.meleekills ] );
 						PrintToChat( COLOR_BLUE + "Hours spent in mission        = " + COLOR_GREEN + TruncateFloat( ( player_profile[ Stats.missiondecims ].tointeger() / 36000.0 ), 2 ).tostring() );
@@ -341,10 +455,11 @@ function OnGameEvent_player_say( params )
 						PrintToChat( COLOR_BLUE + "Average meters ran per minute = " + COLOR_GREEN + TruncateFloat( ( 60 * ( ( 1.0 * player_profile[ Stats.distancetravelled ].tointeger() ) / ( 1.0 * player_profile[ Stats.missiondecims ].tointeger() ) ) ), 2 ).tostring() );
 						PrintToChat( COLOR_BLUE + "Fast reload fails             = " + COLOR_GREEN + player_profile[ Stats.reloadfail ] );
 						PrintToChat( COLOR_BLUE + "Total times got 1st, 2nd, 3rd = " + COLOR_GREEN + player_profile[ Stats.top1 ] + COLOR_BLUE + ", " + COLOR_GREEN + player_profile[ Stats.top2 ] + COLOR_BLUE + ", " + COLOR_GREEN + player_profile[ Stats.top3 ] );
+						PrintToChat( COLOR_BLUE + "Number of Pace to WR 00:00.00 = " + COLOR_GREEN + player_profile[ Stats.wrequals ] );
 					}
 					else
 					{
-						PrintToChat( COLOR_RED + "Internal ERROR: player_profile.len() != g_fStatCount (" + profile_length + " != " + g_fStatCount + " )" );
+						LogError( COLOR_RED + "Internal ERROR: player_profile.len() != g_fStatCount (" + profile_length + " != " + g_fStatCount + " )", "r_" + prefix_short + "_profile_" + id + "_" + type );
 					}
 				}
 				else if ( type == "points" )
@@ -353,7 +468,7 @@ function OnGameEvent_player_say( params )
 
 					if ( !ValidArray( player_profile, 2 ) )
 					{
-						PrintToChat( COLOR_RED + "Internal ERROR: that player's points profile is invalid length = " + profile_length.tostring() );
+						LogError( COLOR_RED + "Internal ERROR: that player's points profile is invalid length = " + profile_length.tostring(), "r_" + prefix_short + "_profile_" + id + "_" + type );
 						return;
 					}
 

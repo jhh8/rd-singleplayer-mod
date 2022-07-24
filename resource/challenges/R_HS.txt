@@ -14,6 +14,7 @@
 		"rd_hackall" 						"1"
 		"rd_max_marines" 					"1"
 		"rd_weapon_requirement_override" 	"2"	// disables flamer requirement
+		"rd_auto_fast_restart"				"1"
 		
 		"asw_horde_override"							"0"
 		"asw_wanderer_override"							"0"

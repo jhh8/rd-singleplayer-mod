@@ -13,7 +13,9 @@ enum Stats {
 	reloadfail,
 	top1,
 	top2,
-	top3
+	top3,
+	wrequals,
+	points_nohit_nfngl
 }
 
 g_hMarine <- null;
@@ -35,7 +37,7 @@ g_bNFNGLRun <- true;
 g_bNOHITRun <- true;
 g_bMissionComplete <- false;
 
-const g_Version = "1";
+const g_Version = "3";
 g_bPointsChanged <- false;
 g_stat_prev_points <- 0;
 g_stat_new_points <- 0;
@@ -44,6 +46,7 @@ g_stat_meleekills <- 0;
 g_stat_missiondecims <- 0;
 g_stat_distancetravelled <- 0;
 g_stat_reloadfail <- 0;
+g_stat_wrequals <- 0;
 
 g_bIsMapspawn <- false;
 
@@ -62,7 +65,7 @@ function OnMissionStart()
 
 	if ( !ValidArray( player_list, 2 ) )
 	{
-		PrintToChat( COLOR_RED + "FATAL Internal ERROR: asw_challenge_thinker: player_list array has invalid length = " + player_list.len().tostring() );
+		LogError( COLOR_RED + "FATAL Internal ERROR: asw_challenge_thinker: player_list array has invalid length = " + player_list.len().tostring() );
 		this["self"].Destroy();
 		return;
 	}
@@ -135,7 +138,7 @@ function InitializeSplits()
 
 	if ( !ValidArray( splits_list, 2 ) )
 	{
-		PrintToChat( COLOR_RED + "Internal ERROR: InitializeSplits: splits_list array has invalid length = " + splits_list.tostring() );
+		LogError( COLOR_RED + "Internal ERROR: InitializeSplits: splits_list array has invalid length = " + splits_list.tostring(), FILENAME_SPLITS );
 		return;
 	}
 
@@ -227,9 +230,14 @@ function OnSplitReached( hEntity )
 	local time_difference = g_tCurObjectiveTimes[ strObjectiveName ] - g_tWRObjectiveTimes[ strObjectiveName ].tofloat();
 
 	if ( time_difference > 0 )
+	{
 		color = COLOR_RED;
+	}
 	if ( time_difference < 0.01 && time_difference > -0.01 )
+	{
 		color = COLOR_YELLOW;
+		g_stat_wrequals++;
+	}
 
 	PrintToChat( COLOR_BLUE + "Pace to WR: " + color + TimeToString( time_difference, false ) );
 }
@@ -450,23 +458,48 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 		}
 	}
 
-	if ( player_profile[0].tointeger() != g_Version.tointeger() )
+	g_stat_prev_points <- player_profile[ Stats.points ].tofloat();
+
+	if ( iMissionComplete )
 	{
-		// change the mod version when adding more stats or changing something in the way its stored, which would require the information to be interpreted or written differently
-		// here we can identify when a player's profile has to undercome changes and do a stat fixup
+		if ( g_stat_new_points == 0 )
+			g_stat_new_points <- g_stat_prev_points;
+		else
+			g_stat_new_points <- g_stat_new_points + CalculatePlayersChallengePoints( g_steam_id, g_strPrefix );
+
+		if ( g_bNFNGLRun )
+			ManageMapStats( FILENAME_PLAYERPROFILE + "_nf+ngl", g_strCurMap );
+
+		if ( g_bNOHITRun )
+			ManageMapStats( FILENAME_PLAYERPROFILE + "_nohit", g_strCurMap );
+
+		UpdatePointsLeaderboard( g_steam_id, g_strPrefix, g_stat_new_points );
+	}
+
+	// change the mod version when adding more stats or changing something in the way its stored, which would require the information to be interpreted or written differently
+	// here we can identify when a player's profile has to undercome changes and do a stat fixup
+	if ( player_profile[ Stats.version ].tointeger() == 1 )
+	{
+		player_profile.push("0");
+		player_profile[ Stats.version ] = "2";
+	}
+
+	if ( player_profile[ Stats.version ].tointeger() == 2 )
+	{
+		player_profile.push("0");
 	}
 
 	player_profile[ Stats.version ] = g_Version;
-
-	g_stat_prev_points <- player_profile[ Stats.points ].tofloat();
 
 	if ( g_bPointsChanged )
 	{
 		if ( g_stat_prev_points - 0.001 > g_stat_new_points )
 		{
-			DelayCodeExecution( "PrintToChat( \"ERROR: Player has lost points after completing the map somehow (\" + g_stat_prev_points.tostring() + \" -> \" + g_stat_new_points + \") not changing points.\" );", 0.02 );
+			//DelayCodeExecution( "LogError( \"ERROR: Player has lost points after completing the map somehow (\" + g_stat_prev_points.tostring() + \" -> \" + g_stat_new_points + \") not changing points.\", g_steam_id );", 0.02 );
+			LogError( "", "Player " + g_steam_id + " points were calculated wrong somewhere, " + g_stat_prev_points.tostring() + " -> " + g_stat_new_points.tostring() );
+			player_profile[ Stats.points ] = g_stat_new_points.tostring();
 		}
-		else if ( g_stat_prev_points != g_stat_new_points )
+		else if ( g_stat_prev_points + 0.001 < g_stat_new_points )
 		{
 			player_profile[ Stats.points ] = g_stat_new_points.tostring();
 			DelayCodeExecution( "PrintToChat( COLOR_GREEN + g_hPlayer.GetPlayerName() + COLOR_BLUE + \" points have changed from \" + COLOR_GREEN + g_stat_prev_points.tostring() + COLOR_BLUE + \" to \" + COLOR_GREEN + g_stat_new_points.tostring() + COLOR_GREEN + \" (+\" + TruncateFloat( ( g_stat_new_points - g_stat_prev_points ), 2 ).tostring() + \")\" + COLOR_BLUE + \"!\" );", 0.02 );
@@ -478,21 +511,14 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 	player_profile[ Stats.missiondecims ] = ( player_profile[ Stats.missiondecims ].tointeger() + g_stat_missiondecims ).tostring();
 	player_profile[ Stats.distancetravelled ] = ( player_profile[ Stats.distancetravelled ].tointeger() + UnitsToDecimeters( g_stat_distancetravelled ) ).tostring();
 	player_profile[ Stats.reloadfail ] = ( player_profile[ Stats.reloadfail ].tointeger() + g_stat_reloadfail ).tostring();
+	player_profile[ Stats.wrequals ] = ( player_profile[ Stats.wrequals ].tointeger() + g_stat_wrequals ).tostring();
+	player_profile[ Stats.points_nohit_nfngl ] = CalculatePlayersChallengePoints( g_steam_id, g_strPrefix ).tostring();
 	
 	if ( new_placement == 1 ) player_profile[ Stats.top1 ] = ( player_profile[ Stats.top1 ].tointeger() + 1 ).tostring();
 	if ( new_placement == 2 ) player_profile[ Stats.top2 ] = ( player_profile[ Stats.top2 ].tointeger() + 1 ).tostring();
 	if ( new_placement == 3 ) player_profile[ Stats.top3 ] = ( player_profile[ Stats.top3 ].tointeger() + 1 ).tostring();
 
 	WriteFile( FILENAME_PLAYERPROFILE + "_general", player_profile, "|", 1, "" );
-
-	if ( iMissionComplete )
-	{
-		if ( g_bNFNGLRun )
-			ManageMapStats( FILENAME_PLAYERPROFILE + "_nf+ngl", g_strCurMap );
-
-		if ( g_bNOHITRun )
-			ManageMapStats( FILENAME_PLAYERPROFILE + "_nohit", g_strCurMap );
-	}
 }
 
 function ManageMapStats( filename, mapname )
@@ -519,6 +545,9 @@ function ManageMapStats( filename, mapname )
 	// sort the list and write
 	if ( bNewMap )
 	{
+		g_stat_new_points <- g_stat_new_points + g_bonus_points_per_challenge;
+		g_bPointsChanged <- true;
+		
 		for ( local i = 0; i < player_profile.len() - 1; ++i )	// nubic selection sort
 		{
 			local mapname = player_profile[i];

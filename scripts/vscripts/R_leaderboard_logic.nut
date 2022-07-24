@@ -1,3 +1,5 @@
+const g_bonus_points_per_challenge = 7.5;
+
 enum Stats {
 	version,
 	points,
@@ -8,7 +10,9 @@ enum Stats {
 	reloadfail,
 	top1,
 	top2,
-	top3
+	top3,
+	wrequals,
+	points_nohit_nfngl
 }
 
 // mode is "rs" or "hs", data is one player's steamid and time (data len == 2), bForceBuild == false when the function is called by completing a mission
@@ -26,7 +30,7 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 
 	if ( !ValidArray( leaderboard, 3 ) )
 	{
-		PrintToChat( COLOR_RED + "Internal ERROR: BuildLeaderboard: leaderboard array has invalid length = " + leaderboard.len().tostring() );
+		LogError( COLOR_RED + "Internal ERROR: BuildLeaderboard: leaderboard array has invalid length = " + leaderboard.len().tostring(), filename );
 		return [-9, -9, -9];
 	}
 
@@ -124,7 +128,7 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 
 	if ( precision_list.len() != 14 )
 	{
-		PrintToChat( COLOR_RED + "Internal ERROR: CalculateLeaderboard: precision list is wrong length = " + precision_list.len().tostring() );
+		LogError( COLOR_RED + "Internal ERROR: CalculateLeaderboard: precision list is wrong length = " + precision_list.len().tostring() );
 		return null;
 	}
 
@@ -191,7 +195,7 @@ function WritePlayersPoints( steamid, mode, map_name, points )
 	
 	if ( !ValidArray( profile_points, 2 ) )
 	{
-		PrintToChat( COLOR_RED + "Internal ERROR: WritePlayersPoints: profile_points array for player " + steamid + " is invalid length = " + profile_length.tostring() );
+		LogError( COLOR_RED + "Internal ERROR: WritePlayersPoints: profile_points array for player " + steamid + " is invalid length = " + profile_length.tostring() );
 		return;
 	}
 
@@ -227,19 +231,20 @@ function WritePlayersPoints( steamid, mode, map_name, points )
 	CalculatePlayersGeneralPoints( steamid, mode );
 }
 
+// calculates general points WITHOUT the bonus points for nohit/nf+ngl
 function CalculatePlayersGeneralPoints( steamid, mode )
 {
 	local profile_points = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_points" ), "|" ) );
 	local profile_length = profile_points.len();
 	if ( profile_length == 0 )
 	{
-		PrintToChat( "MINOR Internal ERROR: CalculatePlayersGeneralPoints: player " + steamid + " doesnt have a points profile" );
+		LogError( "MINOR Internal ERROR: CalculatePlayersGeneralPoints: player " + steamid + " doesnt have a points profile" );
 		return;
 	}
 
 	if ( !ValidArray( profile_points, 2 ) )
 	{
-		PrintToChat( "MINOR Internal ERROR: CalculatePlayersGeneralPoints: profile_points array for player " + steamid + " is invalid length = " + profile_length.tostring() );
+		LogError( "MINOR Internal ERROR: CalculatePlayersGeneralPoints: profile_points array for player " + steamid + " is invalid length = " + profile_length.tostring() );
 		return;
 	}
 
@@ -248,6 +253,9 @@ function CalculatePlayersGeneralPoints( steamid, mode )
 	for ( local i = 0; i < ( profile_length - 1 ) / increment + 1; ++i )
 		for ( local j = increment * i, maps_count = 1; j < profile_length && maps_count <= increment / 2; j += 2, ++maps_count )
 			points += profile_points[j + 1].tofloat() / ( increment * ( pow( 2, i ) ) );
+
+	// uncomment this when doing /r_admin rebuild_all_leaderboards, todo: adapt this into the chat command somehow
+	//points += CalculatePlayersChallengePoints( steamid, mode );
 
 	if ( steamid == GetPlayerSteamID() )
 	{	// points will be written to general profile in UpdatePlayerData function
@@ -259,7 +267,7 @@ function CalculatePlayersGeneralPoints( steamid, mode )
 		local player_general_profile = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_general" ), "|" ) );
 		if ( player_general_profile.len() == 0 )
 		{
-			PrintToChat( "MINOR Internal ERROR: CalculatePlayersGeneralPoints: player " + steamid + " doesnt have a general profile" );	
+			LogError( "MINOR Internal ERROR: CalculatePlayersGeneralPoints: player " + steamid + " doesnt have a general profile" );	
 			return;
 		}
 
@@ -268,6 +276,13 @@ function CalculatePlayersGeneralPoints( steamid, mode )
 		WriteFile( "r_" + mode + "_profile_" + steamid + "_general", player_general_profile, "|", 1, "" );
 	}
 
+	// do not add Challenge Points when doing /r_admin rebuild_all_leaderboards, todo: adapt this into the chat command somehow
+	UpdatePointsLeaderboard( steamid, mode, points + CalculatePlayersChallengePoints( steamid, mode ) );
+}
+
+// note: doesnt get called when a player doesnt improve their time, but we also need to call this when beating a unique map with nohit or nf+ngl, so in that case we call it from R_main_shared.nut
+function UpdatePointsLeaderboard( steamid, mode, points )
+{
 	local leaderboard_points = CleanList( split( FileToString( "r_" + mode + "_leaderboard_points" ), "|" ) );
 	local lb_length = leaderboard_points.len();
 	local bPlayerFound = false;
@@ -291,4 +306,12 @@ function CalculatePlayersGeneralPoints( steamid, mode )
 	SortArray2( leaderboard_points );
 
 	WriteFile( "r_" + mode + "_leaderboard_points", leaderboard_points, "|", 2, "" );
+}
+
+function CalculatePlayersChallengePoints( steamid, mode )
+{
+	local maps_nohit = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_nohit" ), "|" ) );
+	local maps_nfngl = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_nf+ngl" ), "|" ) );
+
+	return g_bonus_points_per_challenge * ( maps_nohit.len() + maps_nfngl.len() );
 }

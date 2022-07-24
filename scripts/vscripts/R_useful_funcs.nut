@@ -10,7 +10,7 @@ function GetCurrentMapInfo()
 
 	if ( !ValidArray( maps_info, 4 ) )
 	{
-		PrintToChat( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring() );
+		LogError( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring(), FILENAME_MAPSINFO );
 		return;
 	}
 
@@ -32,6 +32,8 @@ function GetCurrentMapInfo()
 }
 
 // broadcast a message to other servers. second parameter true means map name and game mode will be included in the beginning of the message
+// important: if broadcasting trying to broadcast couple messages at the same time, only the last one will be broadcasted. (0.1 second update for broadcasting).
+// todo: add a message queue to support multiple message broadcasts at same time? or some hack to parse multiple messages as one
 function BroadcastMessage( message, bMissionCompletion = false )
 {
 	if ( bMissionCompletion )
@@ -79,7 +81,7 @@ function BuildPlayerList()
 	
 	if ( !ValidArray( player_list, 2 ) )
 	{
-		PrintToChat( COLOR_RED + "FATAL Internal ERROR: player_list array has invalid length = " + player_list.len().tostring() );
+		LogError( COLOR_RED + "FATAL Internal ERROR: player_list array has invalid length = " + player_list.len().tostring() );
 		this["self"].Destroy();
 		return;
 	}
@@ -231,14 +233,24 @@ function str( parameter )
 	return parameter.tostring();
 }
 
+function LogError( str_message, str_info = "" )
+{
+	PrintToChat( str_message );
+
+	local error_list = CleanList( split( FileToString( "r_errorlog" ), "|" ) );
+	error_list.push( str_message + " " + str_info );
+
+	WriteFile( "r_errorlog", error_list, "|", 1, "" );
+}
+
 function PrintToChat( str_message )
 {
 	ClientPrint( null, 3, str_message );
 }
 
-function DelayCodeExecution( string_code, delay )
+function DelayCodeExecution( string_code, delay, str_entity_name = "asw_challenge_thinker" )
 {
-	DoEntFire( "asw_challenge_thinker", "RunScriptCode", string_code, delay, null, null );
+	DoEntFire( str_entity_name, "RunScriptCode", string_code, delay, null, null );
 }
 
 function DelayFunctionCall( function_name, function_params, delay )
