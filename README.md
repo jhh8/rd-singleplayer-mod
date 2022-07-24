@@ -20,6 +20,8 @@ Individual points are calculated based on the map points. Simply complete more d
 
 Completing a map for a second time and getting a slower time will not grant points again, it is not a farming system.
 
+Important note: players also get an additional 7.5 points for completing a map without getting hit or without using grenade launcher and flamethrower. (Max of 15 additional points per map).
+
 # Maps
 Each map has a map rating (higher rating for more difficult maps) and a map precision. Higher precision should be set for maps where times will be close to each other.
 
@@ -30,7 +32,7 @@ New supported maps can be added, map rating and map precision can be changed by 
 # Other Stats
 The mod tracks some general stats for each player on each game mode. For example number of aliens killed, number of aliens killed by melee, number of reloads failed, number of kilometers ran etc.
 
-There is also a seperate leaderboard for amount of maps completed without getting hit and without using a flamer and grenade launcher. Once a person completes a map without getting hit or using flamer and grenade launcher, they get notified in chat about that.
+There is also a seperate leaderboard for amount of maps completed without getting hit and without using a flamer and grenade launcher. Once a person completes a map without getting hit or using flamer and grenade launcher, they get notified in chat about that and get a bonus 7.5 individual points.
 
 # Admins
 There is a file called r_adminlist which contains steamid's of admins. What admins can do is execute commands with /r_admin prefix.
