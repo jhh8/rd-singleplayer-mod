@@ -5,6 +5,8 @@ It is meant to be installed for dedicated servers.
 
 - Note: the mod stores all the information in server's files, so the leaderboards and other stats are seperate for each server. You can transfer the data from server to server by transfering over the saved data from reactivedrop/save/vscripts on your server.
 
+- However, if you launch couple servers which share same files, they will share all the information and it will be updated at runtime. If you want to host multiple servers, it is recommended to do that. Also servers like that will have cross-messaging between servers, if you have the mapspawn.nut script running.
+
 # Game Modes
 - Ranked Relaxed Solo - difficulty is 1 player brutal, no tech requirement, any character completes the hack automatically.
 
