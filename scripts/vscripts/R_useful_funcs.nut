@@ -154,12 +154,13 @@ function UnitsToDecimeters( value )
 	return ( value * 0.1905 ).tointeger();
 }
 
-function CleanList( list )
+function CleanList( list, popeof = true )
 {
 	if ( list.len() == 0 )
 		return list;
 	
-	list.pop();	// pop the end of line
+	if ( popeof )
+		list.pop();	// pop the end of file
 	
 	for ( local i = 0; i < list.len(); ++i )
 	{

@@ -176,6 +176,21 @@ function OnGameEvent_player_say( params )
 
 					return;
 				}
+				case "dumprawfile":
+				{
+					local file_array = split( FileToString( argv[2] ), (10).tochar() );
+					local file_length = file_array.len();
+
+					if ( file_length == 0 )
+						PrintToChat( COLOR_YELLOW + "No such file: " + COLOR_RED + argv[2] );
+
+					for ( local i = 0; i < file_length; ++i )
+					{
+						PrintToChat( COLOR_BLUE + i.tostring() + ": " + COLOR_LIGHTBLUE + file_array[i] );
+					}
+
+					return;
+				}
 			}
 		}
 
@@ -184,12 +199,102 @@ function OnGameEvent_player_say( params )
 			local command = "";
 			
 			for ( local i = 2; i < argc; ++i )
-			{
 				command += argv[i] + " ";
-			}
 				
 			DoEntFire( "worldspawn", "runscriptcode", command, 0, null, null );
 			PrintToChat( "Ran command - " + command );
+			return;
+		}
+
+		if ( argv[1].tolower() == "edit_file_line" || argv[1].tolower() == "efl" )
+		{
+			if ( argc < 5 )
+				PrintToChat( "Not enough arguments." );
+
+			local file_array = split( FileToString( argv[2] ), (10).tochar() );
+			local file_length = file_array.len();
+			local line_number = argv[4].tointeger();
+			local _string = "";
+
+			if ( file_length == 0 )
+			{
+				PrintToChat( COLOR_YELLOW + "No such file: " + COLOR_RED + argv[2] );
+				return;
+			}
+
+			file_array.pop();	// pop eof 
+			file_length--;
+
+			for ( local i = 5; i < argc; ++i )
+				_string += argv[i] + " ";
+
+			switch ( argv[3].tolower() )
+			{
+				case "remove":
+				{
+					if ( line_number >= file_length )
+					{
+						PrintToChat( "Removing the last line." );
+
+						local _file_array = [];
+
+						for ( local i = 0; i < file_length - 1; ++i )
+							_file_array.push( file_array[i] );
+
+						file_array = _file_array;
+					}
+					else
+					{
+						// remove method doesnt remove it correctly, just leaves the value in that index as blank
+						//file_array.remove( line_number );
+
+						// remove it correctly by making a new array
+						local _file_array = [];
+
+						for ( local i = 0; i < file_length - 1; ++i )
+						{
+							if ( i >= line_number )
+								_file_array.push( file_array[i + 1] );
+							else
+								_file_array.push( file_array[i] );
+						}
+
+						file_array = _file_array;
+					}
+
+					break;
+				}
+				case "insert":
+				{
+					if ( line_number > file_length )
+					{
+						PrintToChat( "Specified line number is bigger than number of lines in the file. Inserting the string as the last line." );
+						file_array.push( _string );
+						break;
+					}
+
+					file_array.insert( line_number, _string );
+
+					break;
+				}
+				case "edit":
+				{
+					if ( line_number > file_length )
+					{
+						PrintToChat( COLOR_RED + "UNABLE TO EDIT: " + COLOR_YELLOW + "Specified line number is bigger than number of lines in the file." );
+						return;
+					}
+
+					file_array[ line_number ] = _string;
+
+					break;
+				}
+			}
+
+			file_array = CleanList( file_array, false );
+			WriteFile( argv[2], file_array, "", 1, "" );
+			PrintToChat( COLOR_GREEN + "Edited file successfully." );
+
 			return;
 		}
 
@@ -214,9 +319,11 @@ function OnGameEvent_player_say( params )
 				PrintToChat( COLOR_GREEN + "- /r welcome " + COLOR_YELLOW + "[yes/no]" + COLOR_BLUE + " - disable/enable welcome message for yourself" );
 				return;
 			}
-			case "adminhelp":
+			case "adminhelp":// /r_admin edit_file_line |file name| [insert/remove/edit] |line number| |string|
 			{
 				PrintToChat( COLOR_BLUE + "List of " + COLOR_RED + "ADMIN" + COLOR_BLUE + " commands:" );
+				PrintToChat( COLOR_GREEN + "- /r_admin dumprawfile " + COLOR_YELLOW + "|file name|" );
+				PrintToChat( COLOR_GREEN + "- /r_admin edit_file_line " + COLOR_YELLOW + "|file name|" + COLOR_RED + " [insert/remove/edit] " + COLOR_YELLOW + "|line number|" + " |string|" + COLOR_BLUE + " - USE CAREFULLY" );
 				PrintToChat( COLOR_GREEN + "- /r_admin rebuild_all_leaderboards " + COLOR_YELLOW + "[relaxed/hardcore]" + COLOR_BLUE + " - USE CAREFULLY" );
 				PrintToChat( COLOR_GREEN + "- /r_admin " + COLOR_YELLOW + "[read/clear]" + COLOR_RED + " [feedback/errorlog]" );
 				return;
