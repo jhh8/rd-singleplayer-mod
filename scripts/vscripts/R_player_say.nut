@@ -322,6 +322,7 @@ function OnGameEvent_player_say( params )
 				PrintToChat( COLOR_GREEN + "- /r feedback " + COLOR_YELLOW + "[message]" + COLOR_BLUE + " - writes feedback for admins to read" );
 				PrintToChat( COLOR_GREEN + "- /r maplist" + COLOR_BLUE + " - prints a list of all supported maps" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_BLUE + " - prints current map's and challenge's leaderboard" );
+				PrintToChat( COLOR_GREEN + "- /r leaderboard_statistic" + COLOR_YELLOW + "[1-10]" );
 				PrintToChat( COLOR_GREEN + "- /r points" + COLOR_BLUE + " - prints current challenge's points leaderboard" );
 				PrintToChat( COLOR_GREEN + "- /r profile" + COLOR_BLUE + " - prints your current challenge's general profile" );
 				PrintToChat( COLOR_GREEN + "- /r welcome " + COLOR_YELLOW + "[yes/no]" + COLOR_BLUE + " - disable/enable welcome message for yourself" );
@@ -420,6 +421,79 @@ function OnGameEvent_player_say( params )
 				break;
 			}
 		}
+	}
+
+	if ( argc == 3 )
+	{
+		switch ( argv[1].tolower() )
+		{
+			case "leaderboard_statistic":
+			{
+				local number = argv[2].tofloat();
+				local prefix_short = "";
+				if ( Convars.GetStr( "rd_challenge" ) == "R_RS" ) prefix_short = "rs";
+				else if ( Convars.GetStr( "rd_challenge" ) == "R_HS" ) prefix_short = "hs";
+				else return;
+
+				if ( number < 1 || number > 10 )	// sanity check
+				{
+					PrintToChat( "Expected argument 2 to be a number between 1-10" );
+					return;
+				}
+
+				if ( number == 9 )
+				{
+					PrintToChat( "Todo: make this work for this stat too" );
+					return;
+				}
+
+				local str_names = ["Total Points", "Points from nohit/nf+ngl maps", "Alien kills", "Alien kills by melee", "Hours spent in mission", "Total kilometers ran",
+									"Average meters ran per minute", "Fast reload fails", "Total times got 1st, 2nd, 3rd", "Number of Pace to WR 00:00.00"];
+
+				PrintToChat( COLOR_GREEN + str_names[ number - 1 ] + COLOR_YELLOW + " leaderboard on " + ( prefix_short == "hs" ? ( COLOR_RED + "HARDCORE" ) : ( COLOR_GREEN + "RELAXED" ) ) + COLOR_YELLOW + ":" );
+
+				if ( number == 2 ) number = 11;
+				else if ( number > 2 ) number -= 1;
+
+				local leaderboard = [];
+				foreach( steamid, playername in g_tPlayerList )
+				{
+					local profile = CleanList( split( FileToString( "r_" + prefix_short + "_profile_" + steamid + "_general" ), "|" ) );
+					if ( profile.len() == 0 )
+						continue;
+
+					if ( number == 11 && profile[0] != "3" )
+						continue;
+
+					leaderboard.push( playername );
+
+					local output = profile[ number ].tofloat();
+					if ( number == 4 ) output = TruncateFloat( ( output / 36000.0 ), 2 );
+					if ( number == 5 ) output = output / 10000.0;
+					if ( number == 6 ) output = TruncateFloat( ( 60 * ( ( 1.0 * profile[ Stats.distancetravelled ].tointeger() ) / ( 1.0 * profile[ Stats.missiondecims ].tointeger() ) ) ), 2 );
+
+					leaderboard.push( output );
+				}
+
+				SortArray2( leaderboard );
+
+				local end_index = leaderboard.len() / 2 < 10 ? leaderboard.len() : 20;
+
+				for ( local i = 0; i < end_index; i += 2 )
+				{
+					local spaces = "";
+					for ( local j = 0; j < 15 - leaderboard[i].len(); ++j )
+						spaces += " ";
+					
+					if ( caller_steam_id == GetKeyFromValue( g_tPlayerList, leaderboard[i] ) )
+						PrintToChat( COLOR_BLUE + (i / 2 + 1).tostring() + ": " + COLOR_GREEN + leaderboard[i] + COLOR_BLUE + spaces + " - " + COLOR_GREEN + leaderboard[i+1].tostring() );
+					else
+						PrintToChat( COLOR_BLUE + (i / 2 + 1).tostring() + ": " + leaderboard[i] + spaces + " - " + COLOR_GREEN + leaderboard[i+1].tostring() );
+				}
+			}
+		}
+
+		return;
 	}
 
 	if ( argv[1].tolower() == "feedback" )
