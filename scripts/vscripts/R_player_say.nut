@@ -23,20 +23,28 @@ function OnGameEvent_player_say( params )
 	if ( !argc )
 		return;
 
-	if ( !GetPlayerFromUserID( params["userid"] ) )
-		return;
-
 	if ( argv[0].tolower() != "/r" && argv[0].tolower() != "/r_admin" )
 	{
 		if ( !g_bIsMapspawn )
 			return;
 
 		local file_messagelog = CleanList( split( FileToString( "r_messagelog" ), "|" ) );
-		file_messagelog.push( FilterName( GetPlayerFromUserID( params["userid"] ).GetPlayerName() ) );
+
+		if ( GetPlayerFromUserID( params["userid"] ) )
+			file_messagelog.push( FilterName( GetPlayerFromUserID( params["userid"] ).GetPlayerName() ) );
+		else // was a console message
+			file_messagelog.push( "Console" );
+		
 		file_messagelog.push( FilterName( text ) );
 
 		WriteFile( "r_messagelog", file_messagelog, "|", 2, "" );
 		
+		return;
+	}
+
+	if ( !GetPlayerFromUserID( params["userid"] ) )
+	{
+		printl( "\nJust in case i made it that console cant run chat commands.. :(\n" );
 		return;
 	}
 	
@@ -319,7 +327,7 @@ function OnGameEvent_player_say( params )
 				PrintToChat( COLOR_GREEN + "- /r welcome " + COLOR_YELLOW + "[yes/no]" + COLOR_BLUE + " - disable/enable welcome message for yourself" );
 				return;
 			}
-			case "adminhelp":// /r_admin edit_file_line |file name| [insert/remove/edit] |line number| |string|
+			case "adminhelp":
 			{
 				PrintToChat( COLOR_BLUE + "List of " + COLOR_RED + "ADMIN" + COLOR_BLUE + " commands:" );
 				PrintToChat( COLOR_GREEN + "- /r_admin dumprawfile " + COLOR_YELLOW + "|file name|" );
