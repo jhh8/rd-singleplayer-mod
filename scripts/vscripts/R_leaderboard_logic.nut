@@ -96,7 +96,7 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 				return [ -1, -1, -1 ];
 		}
 
-		local output_leaderboard = CalculateLeaderboard( leaderboard, map_rating, map_precision );
+		local output_leaderboard = CalculateLeaderboard( leaderboard, map_rating, map_precision, mode );
 		if ( output_leaderboard == null )
 			return [ -1, -1, -1 ];
 
@@ -104,7 +104,7 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 		
 		// just in case always write points to all players
 		for ( local i = 0; i < output_leaderboard.len(); i += 3 )
-			WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+2] );
+			WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+2], !!!caller_steamid );
 
 		if ( caller_steamid )
 		{	
@@ -122,11 +122,11 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 //g_arrPrecision <- [ 0.995, 0.993, 0.991, 0.988, 0.985, 0.982, 0.977, 0.970, 0.960, 0.950, 0.940 ];
 
 // we recieve a sorted leaderboard array which contains steamid+time
-function CalculateLeaderboard( leaderboard, map_rating, map_precision )
+function CalculateLeaderboard( leaderboard, map_rating, map_precision, mode )
 {
 	local precision_list = CleanList( split( FileToString( "r_precision_list" ), "|" ) );
 
-	if ( precision_list.len() != 14 )
+	if ( precision_list.len() != 15 )
 	{
 		LogError( COLOR_RED + "Internal ERROR: CalculateLeaderboard: precision list is wrong length = " + precision_list.len().tostring() );
 		return null;
@@ -137,8 +137,13 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 	local lb_positions = [];
 	local output = [];
 	local lb_length = leaderboard.len();
-	// want the map_rating_advanced to grow slower on harder maps
-	local map_rating_advanced = map_rating * pow( ( precision_list[13].tofloat() / map_rating ) * lb_length / 2, precision_list[12].tofloat() );
+	// want the map_rating_advanced to grow slower on harder maps, not on hardcore though
+	local map_rating_advanced = 0;
+	if ( mode == "hs" )
+		map_rating_advanced = map_rating * pow( lb_length / 2, precision_list[13].tofloat() );
+	else
+		map_rating_advanced = map_rating * pow( ( precision_list[14].tofloat() / map_rating ) * lb_length / 2, precision_list[12].tofloat() );
+		
 	local precision_multiplier = precision_list[ map_precision ].tofloat();
 	local pos_reltime_relevance = 1.0 / pow( 1.0 / ( 1.0 - precision_multiplier ), 0.1 );
 	local time_WR = 0;
@@ -188,7 +193,7 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision )
 	return output;
 }
 
-function WritePlayersPoints( steamid, mode, map_name, points )
+function WritePlayersPoints( steamid, mode, map_name, points, bAdminCommand = false )
 {
 	local profile_points = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_points" ), "|" ) );
 	local profile_length = profile_points.len();
@@ -228,11 +233,11 @@ function WritePlayersPoints( steamid, mode, map_name, points )
 
 	WriteFile( "r_" + mode + "_profile_" + steamid + "_points", profile_points, "|", 2, "" );
 
-	CalculatePlayersGeneralPoints( steamid, mode );
+	CalculatePlayersGeneralPoints( steamid, mode, bAdminCommand );
 }
 
 // calculates general points WITHOUT the bonus points for nohit/nf+ngl
-function CalculatePlayersGeneralPoints( steamid, mode )
+function CalculatePlayersGeneralPoints( steamid, mode, bAdminCommand = false )
 {
 	local profile_points = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_points" ), "|" ) );
 	local profile_length = profile_points.len();
@@ -254,8 +259,9 @@ function CalculatePlayersGeneralPoints( steamid, mode )
 		for ( local j = increment * i, maps_count = 1; j < profile_length && maps_count <= increment / 2; j += 2, ++maps_count )
 			points += profile_points[j + 1].tofloat() / ( increment * ( pow( 2, i ) ) );
 
-	// uncomment this when doing /r_admin rebuild_all_leaderboards, todo: adapt this into the chat command somehow
-	//points += CalculatePlayersChallengePoints( steamid, mode );
+	// called by /r_admin rebuild_all_leaderboards
+	if ( bAdminCommand )
+		points += CalculatePlayersChallengePoints( steamid, mode );
 
 	if ( steamid == GetPlayerSteamID() )
 	{	// points will be written to general profile in UpdatePlayerData function
@@ -276,8 +282,10 @@ function CalculatePlayersGeneralPoints( steamid, mode )
 		WriteFile( "r_" + mode + "_profile_" + steamid + "_general", player_general_profile, "|", 1, "" );
 	}
 
-	// do not add Challenge Points when doing /r_admin rebuild_all_leaderboards, todo: adapt this into the chat command somehow
-	UpdatePointsLeaderboard( steamid, mode, points + CalculatePlayersChallengePoints( steamid, mode ) );
+	if ( !bAdminCommand )
+		UpdatePointsLeaderboard( steamid, mode, points + CalculatePlayersChallengePoints( steamid, mode ) );
+	else
+		UpdatePointsLeaderboard( steamid, mode, points );
 }
 
 // note: doesnt get called when a player doesnt improve their time, but we also need to call this when beating a unique map with nohit or nf+ngl, so in that case we call it from R_main_shared.nut
