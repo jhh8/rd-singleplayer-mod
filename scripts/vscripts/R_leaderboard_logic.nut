@@ -259,14 +259,13 @@ function CalculatePlayersGeneralPoints( steamid, mode, bAdminCommand = false )
 		for ( local j = increment * i, maps_count = 1; j < profile_length && maps_count <= increment / 2; j += 2, ++maps_count )
 			points += profile_points[j + 1].tofloat() / ( increment * ( pow( 2, i ) ) );
 
-	// called by /r_admin rebuild_all_leaderboards
-	if ( bAdminCommand )
-		points += CalculatePlayersChallengePoints( steamid, mode );
+	local points_challenges = CalculatePlayersChallengePoints( steamid, mode );
+	points += points_challenges;
 
 	if ( steamid == GetPlayerSteamID() )
-	{	// points will be written to general profile in UpdatePlayerData function
+	{	// points will be written to general profile in UpdatePlayerData function, send the points without challenges added there
 		g_bPointsChanged <- true;
-		g_stat_new_points <- points;
+		g_stat_new_points <- points - points_challenges;
 	}
 	else
 	{
@@ -282,10 +281,7 @@ function CalculatePlayersGeneralPoints( steamid, mode, bAdminCommand = false )
 		WriteFile( "r_" + mode + "_profile_" + steamid + "_general", player_general_profile, "|", 1, "" );
 	}
 
-	if ( !bAdminCommand )
-		UpdatePointsLeaderboard( steamid, mode, points + CalculatePlayersChallengePoints( steamid, mode ) );
-	else
-		UpdatePointsLeaderboard( steamid, mode, points );
+	UpdatePointsLeaderboard( steamid, mode, points );
 }
 
 // note: doesnt get called when a player doesnt improve their time, but we also need to call this when beating a unique map with nohit or nf+ngl, so in that case we call it from R_main_shared.nut
