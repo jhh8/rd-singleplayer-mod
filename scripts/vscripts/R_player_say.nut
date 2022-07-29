@@ -202,6 +202,56 @@ function OnGameEvent_player_say( params )
 			}
 		}
 
+		if ( argv[1].tolower() == "setdates" )
+		{
+			if ( argv[2].tolower() == "relaxed" )
+			{
+				maps_info <- CleanList( split( FileToString( "r_rs_mapratings" ), "|" ) );
+
+				if ( maps_info.len() == 0 )
+					return;
+
+				maps_info.remove( 0 );	// remove the comment
+
+				if ( !ValidArray( maps_info, 4 ) )
+				{
+					LogError( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring(), argv[2] );
+					return;
+				}
+				
+				local delay_per_map = 0.02;	// bypass SQQuerySuspend
+				PrintToChat( "Process will take " + ( maps_info.len() * delay_per_map / 4.0 ).tostring() + " seconds, please do not interrupt the process." );
+				for ( local i = 0; i < maps_info.len(); i += 4 )
+					DelayCodeExecution( "::AddDate( \"rs\", maps_info[" + i.tostring() + "], \"20220727\")", ( delay_per_map * i / 4.0 ), "worldspawn" );
+
+				// we cant really figure out if the process was successfull or not
+				DelayCodeExecution( "::PrintToChat( COLOR_GREEN + \"Process ended.\" )", ( maps_info.len() * delay_per_map / 4.0 ), "worldspawn" );
+			}
+			else if ( argv[2].tolower() == "hardcore" )
+			{
+				maps_info <- CleanList( split( FileToString( "r_hs_mapratings" ), "|" ) );
+
+				if ( maps_info.len() == 0 )
+					return;
+
+				maps_info.remove( 0 );	// remove the comment
+
+				if ( !ValidArray( maps_info, 4 ) )
+				{
+					LogError( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring(), argv[2] );
+					return;
+				}
+
+				local delay_per_map = 0.02;	// bypass SQQuerySuspend
+				PrintToChat( "Process will take " + ( maps_info.len() * delay_per_map / 4.0 ).tostring() + " seconds, please do not interrupt the process." );
+				for ( local i = 0; i < maps_info.len(); i += 4 )
+					DelayCodeExecution( "::AddDate( \"hs\", maps_info[" + i.tostring() + "], \"20220727\")", ( delay_per_map * i / 4.0 ), "worldspawn" );
+
+				// we cant really figure out if the process was successfull or not
+				DelayCodeExecution( "::PrintToChat( COLOR_GREEN + \"Process ended.\" )", ( maps_info.len() * delay_per_map / 4.0 ), "worldspawn" );
+			}
+		}
+
 		if ( argv[1].tolower() == "run_code" )
 		{
 			local command = "";
@@ -441,19 +491,15 @@ function OnGameEvent_player_say( params )
 					return;
 				}
 
-				if ( number == 9 )
-				{
-					PrintToChat( "Todo: make this work for this stat too" );
-					return;
-				}
-
 				local str_names = ["Total Points", "Points from nohit/nf+ngl maps", "Alien kills", "Alien kills by melee", "Hours spent in mission", "Total kilometers ran",
 									"Average meters ran per minute", "Fast reload fails", "Total times got 1st, 2nd, 3rd", "Number of Pace to WR 00:00.00"];
 
 				PrintToChat( COLOR_GREEN + str_names[ number - 1 ] + COLOR_YELLOW + " leaderboard on " + ( prefix_short == "hs" ? ( COLOR_RED + "HARDCORE" ) : ( COLOR_GREEN + "RELAXED" ) ) + COLOR_YELLOW + ":" );
 
 				if ( number == 2 ) number = 11;
-				else if ( number > 2 ) number -= 1;
+				else if ( number > 2 && number < 7 ) number -= 1;
+				else if ( number == 7 ) number = 0;
+				else if ( number == 8 ) number = 6;
 
 				local leaderboard = [];
 				foreach( steamid, playername in g_tPlayerList )
@@ -462,7 +508,7 @@ function OnGameEvent_player_say( params )
 					if ( profile.len() == 0 )
 						continue;
 
-					if ( number == 11 && profile[0] != "3" )
+					if ( ( number == 11 || number == 10 ) && profile[0].tointeger() <3 )
 						continue;
 
 					leaderboard.push( playername );
@@ -470,12 +516,17 @@ function OnGameEvent_player_say( params )
 					local output = profile[ number ].tofloat();
 					if ( number == 4 ) output = TruncateFloat( ( output / 36000.0 ), 2 );
 					if ( number == 5 ) output = output / 10000.0;
-					if ( number == 6 ) output = TruncateFloat( ( 60 * ( ( 1.0 * profile[ Stats.distancetravelled ].tointeger() ) / ( 1.0 * profile[ Stats.missiondecims ].tointeger() ) ) ), 2 );
+					if ( number == 0 ) output = TruncateFloat( ( 60 * ( ( 1.0 * profile[ Stats.distancetravelled ].tointeger() ) / ( 1.0 * profile[ Stats.missiondecims ].tointeger() ) ) ), 2 );
+					if ( number == 9 ) output = profile[ Stats.top1 ].tointeger() * 1280 * 1280 + profile[ Stats.top2 ].tointeger() * 1280 + profile[ Stats.top3 ].tointeger(); 
 
 					leaderboard.push( output );
 				}
 
 				SortArray2( leaderboard );
+
+				if ( number == 9 )
+					for ( local i = 0; i < leaderboard.len(); i += 2 )
+						leaderboard[i + 1] = ( leaderboard[i + 1] / 1280 / 1280 ).tointeger().tostring() + ", " + ( leaderboard[i + 1] / 1280 % 1280 ).tointeger().tostring() + ", " + ( leaderboard[i + 1] % 1280 ).tointeger().tostring();
 
 				local end_index = leaderboard.len() / 2 < 10 ? leaderboard.len() : 20;
 
@@ -486,9 +537,9 @@ function OnGameEvent_player_say( params )
 						spaces += " ";
 					
 					if ( caller_steam_id == GetKeyFromValue( g_tPlayerList, leaderboard[i] ) )
-						PrintToChat( COLOR_BLUE + (i / 2 + 1).tostring() + ": " + COLOR_GREEN + leaderboard[i] + COLOR_BLUE + spaces + " - " + COLOR_GREEN + leaderboard[i+1].tostring() );
+						PrintToChat( COLOR_BLUE + (i / 2 + 1).tostring() + ": " + ( ( i / 2 + 1 ) == 10 ? "" : " " ) + COLOR_GREEN + leaderboard[i] + COLOR_BLUE + spaces + " - " + COLOR_GREEN + leaderboard[i+1].tostring() );
 					else
-						PrintToChat( COLOR_BLUE + (i / 2 + 1).tostring() + ": " + leaderboard[i] + spaces + " - " + COLOR_GREEN + leaderboard[i+1].tostring() );
+						PrintToChat( COLOR_BLUE + (i / 2 + 1).tostring() + ": " + ( ( i / 2 + 1 ) == 10 ? "" : " " ) + leaderboard[i] + spaces + " - " + COLOR_GREEN + leaderboard[i+1].tostring() );
 				}
 			}
 		}
@@ -883,41 +934,43 @@ function OnGameEvent_player_say( params )
 
 					PrintToChat( COLOR_YELLOW + "Leaderboard for map " + COLOR_GREEN + type + COLOR_YELLOW + " on " + ( prefix == "RELAXED" ? COLOR_GREEN : COLOR_RED ) + prefix.toupper() + COLOR_YELLOW + ":" );
 					
-					if ( lb_length / 3 <= 5 )
+					if ( lb_length / 4 <= 5 )
 						range = "full";
 
 					switch ( range )
 					{
 						case "full":
 						{
-							for ( local i = 0; i < lb_length; i += 3 )
+							for ( local i = 0; i < lb_length; i += 4 )
 							{
 								local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
 								local name = g_tPlayerList[ leaderboard[i] ];
 								local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+								local date = ReinterpretDate( leaderboard[i + 2] );
 
 								local spaces_name = "";
 								for ( local j = 0; j < 13 - name.len(); ++j )
 									spaces_name += " ";
 								
-								PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+								PrintToChat( COLOR_BLUE + (i/4+1).tostring() + ( (i/4+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 3] + COLOR_BLUE + " points - " + color + date );
 							}
 							
 							return;
 						}
 						case "top":
 						{
-							for ( local i = 0; i < 15; i += 3 )
+							for ( local i = 0; i < 20; i += 4 )
 							{
 								local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
 								local name = g_tPlayerList[ leaderboard[i] ];
 								local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+								local date = ReinterpretDate( leaderboard[i + 2] );
 
 								local spaces_name = "";
 								for ( local j = 0; j < 13 - name.len(); ++j )
 									spaces_name += " ";
 								
-								PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+								PrintToChat( COLOR_BLUE + (i/4+1).tostring() + ( (i/4+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 3] + COLOR_BLUE + " points - " + color + date );
 							}
 							
 							return;
@@ -927,15 +980,15 @@ function OnGameEvent_player_say( params )
 							local caller_index = -1;
 							local start_index = -1;
 							local end_index = -1;
-							local last_index = lb_length - 3;
+							local last_index = lb_length - 4;
 							
-							for ( local i = 0; i < lb_length; i += 3 )
+							for ( local i = 0; i < lb_length; i += 4 )
 							{
 								if ( leaderboard[i] == caller_steam_id )
 								{
 									caller_index = i;
-									start_index = i - 6;
-									end_index = i + 6;
+									start_index = i - 8;
+									end_index = i + 8;
 									break;
 								}
 							}
@@ -943,16 +996,17 @@ function OnGameEvent_player_say( params )
 							if ( caller_index == -1 )
 							{
 								// print the "top" range
-								for ( local i = 0; i < 15; i += 3 )
+								for ( local i = 0; i < 20; i += 4 )
 								{
 									local name = g_tPlayerList[ leaderboard[i] ];
 									local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+									local date = ReinterpretDate( leaderboard[i + 2] );
 
 									local spaces_name = "";
 									for ( local j = 0; j < 13 - name.len(); ++j )
 										spaces_name += " ";
 									
-									PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+									PrintToChat( COLOR_BLUE + (i/4+1).tostring() + ( (i/4+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 3] + COLOR_BLUE + " points - " + color + date );
 								}
 								
 								return;
@@ -962,17 +1016,18 @@ function OnGameEvent_player_say( params )
 								if ( start_index < 0 )
 								{
 									// print the "top" range
-									for ( local i = 0; i < 15; i += 3 )
+									for ( local i = 0; i < 20; i += 4 )
 									{
 										local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
 										local name = g_tPlayerList[ leaderboard[i] ];
 										local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+										local date = ReinterpretDate( leaderboard[i + 2] );
 
 										local spaces_name = "";
 										for ( local j = 0; j < 13 - name.len(); ++j )
 											spaces_name += " ";
 										
-										PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+										PrintToChat( COLOR_BLUE + (i/4+1).tostring() + ( (i/4+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 3] + COLOR_BLUE + " points - " + color + date );
 									}
 									
 									return;
@@ -980,34 +1035,36 @@ function OnGameEvent_player_say( params )
 								
 								if ( end_index > last_index )
 								{	
-									for ( local i = start_index - end_index + last_index; i < last_index + 1; i += 3 )
+									for ( local i = start_index - end_index + last_index; i < last_index + 1; i += 4 )
 									{
 										local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
 										local name = g_tPlayerList[ leaderboard[i] ];
 										local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+										local date = ReinterpretDate( leaderboard[i + 2] );
 
 										local spaces_name = "";
 										for ( local j = 0; j < 13 - name.len(); ++j )
 											spaces_name += " ";
 										
-										PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+										PrintToChat( COLOR_BLUE + (i/4+1).tostring() + ( (i/4+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 3] + COLOR_BLUE + " points - " + color + date );
 									}
 									
 									return;
 								}
 								else
 								{
-									for ( local i = start_index; i < end_index + 1; i += 3 )
+									for ( local i = start_index; i < end_index + 1; i += 4 )
 									{
 										local color = leaderboard[i] == caller_steam_id ? COLOR_GREEN : COLOR_BLUE;
 										local name = g_tPlayerList[ leaderboard[i] ];
 										local time = TimeToString( leaderboard[i + 1].tofloat(), true );
+										local date = ReinterpretDate( leaderboard[i + 2] );
 
 										local spaces_name = "";
 										for ( local j = 0; j < 13 - name.len(); ++j )
 											spaces_name += " ";
 										
-										PrintToChat( COLOR_BLUE + (i/3+1).tostring() + ( (i/3+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 2] + COLOR_BLUE + " points" );
+										PrintToChat( COLOR_BLUE + (i/4+1).tostring() + ( (i/4+1).tostring().len() > 1 ? ": " : ":  " ) + color + name + spaces_name + COLOR_BLUE + " - " + color + time + COLOR_BLUE + " - " + COLOR_GREEN + leaderboard[i + 3] + COLOR_BLUE + " points - " + color + date );
 									}
 									
 									return;

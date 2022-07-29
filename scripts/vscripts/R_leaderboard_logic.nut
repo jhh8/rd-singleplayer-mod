@@ -28,7 +28,7 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 	local prev_placement = 0;
 	local new_placement = 0;
 
-	if ( !ValidArray( leaderboard, 3 ) )
+	if ( !ValidArray( leaderboard, 4 ) )
 	{
 		LogError( COLOR_RED + "Internal ERROR: BuildLeaderboard: leaderboard array has invalid length = " + leaderboard.len().tostring(), filename );
 		return [-9, -9, -9];
@@ -36,22 +36,23 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 
 	if ( leaderboard.len() != 0 )
 	{
-		for ( local i = leaderboard.len() - 1; i > 1; i -= 3 )
+		for ( local i = leaderboard.len() - 1; i > 1; i -= 4 )
 		{
-			leaderboard[i-1] = leaderboard[i-1].tofloat();
+			leaderboard[i-2] = leaderboard[i-2].tofloat();
 			leaderboard.remove( i );
 		}
 
 		if ( caller_steamid )
 		{
-			for ( local i = 0; i < leaderboard.len(); i += 2 )
+			for ( local i = 0; i < leaderboard.len(); i += 3 )
 			{
 				if ( leaderboard[i] == caller_steamid )
 				{
 					previous_time = leaderboard[i+1];
-					prev_placement = i / 2 + 1;
+					prev_placement = i / 3 + 1;
 
 					// remove previous time
+					leaderboard.remove(i);
 					leaderboard.remove(i);
 					leaderboard.remove(i);
 
@@ -66,15 +67,20 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 	if ( data.len() != 0 )
 	{
 		data[1] = data[1].tofloat();
+		local time_table = {};
+		LocalTime( time_table );
+
+		local _date = time_table["year"].tostring() + ( time_table["month"] / 10 ).tostring() + ( time_table["month"] % 10 ).tostring() + ( time_table["day"] / 10 ).tostring() + ( time_table["day"] % 10 ).tostring();
 		
 		leaderboard.push( data[0] );
 		leaderboard.push( data[1] );
+		leaderboard.push( _date );
 	}
 
 	local lb_length = leaderboard.len();
 	if ( lb_length != 0 )
 	{
-		SortArray2( leaderboard, false );
+		SortArray3( leaderboard, false );
 
 		// case 1: first entry - write leaderboard
 		// case 2: not first entry, time not improved, placement not improved too then - dont write leaderboard
@@ -82,11 +88,11 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 		// case 4: not first entry, time improved, placement improved - write leaderboard
 		if ( caller_steamid )
 		{
-			for ( local i = 0; i < leaderboard.len(); i += 2 )
+			for ( local i = 0; i < leaderboard.len(); i += 3 )
 			{
 				if ( leaderboard[i] == caller_steamid )
 				{
-					new_placement = i / 2 + 1;
+					new_placement = i / 3 + 1;
 					break;
 				}
 			}
@@ -100,11 +106,11 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 		if ( output_leaderboard == null )
 			return [ -1, -1, -1 ];
 
-		WriteFile( filename, output_leaderboard, "|", 3, "" );
+		WriteFile( filename, output_leaderboard, "|", 4, "" );
 		
 		// just in case always write points to all players
-		for ( local i = 0; i < output_leaderboard.len(); i += 3 )
-			WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+2], !!!caller_steamid );
+		for ( local i = 0; i < output_leaderboard.len(); i += 4 )
+			WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+3], !!!caller_steamid );
 
 		if ( caller_steamid )
 		{	
@@ -121,7 +127,7 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 //			   		    0,     1,     2,     3,     4,     5,     6,     7,     8,     9,    10
 //g_arrPrecision <- [ 0.995, 0.993, 0.991, 0.988, 0.985, 0.982, 0.977, 0.970, 0.960, 0.950, 0.940 ];
 
-// we recieve a sorted leaderboard array which contains steamid+time
+// we recieve a sorted leaderboard array which contains steamid+time+date
 function CalculateLeaderboard( leaderboard, map_rating, map_precision, mode )
 {
 	local precision_list = CleanList( split( FileToString( "r_precision_list" ), "|" ) );
@@ -140,9 +146,9 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision, mode )
 	// want the map_rating_advanced to grow slower on harder maps, not on hardcore though
 	local map_rating_advanced = 0;
 	if ( mode == "hs" )
-		map_rating_advanced = map_rating * pow( lb_length / 2, precision_list[13].tofloat() );
+		map_rating_advanced = map_rating * pow( lb_length / 3, precision_list[13].tofloat() );
 	else
-		map_rating_advanced = map_rating * pow( ( precision_list[14].tofloat() / map_rating ) * lb_length / 2, precision_list[12].tofloat() );
+		map_rating_advanced = map_rating * pow( ( precision_list[14].tofloat() / map_rating ) * lb_length / 3, precision_list[12].tofloat() );
 		
 	local precision_multiplier = precision_list[ map_precision ].tofloat();
 	local pos_reltime_relevance = 1.0 / pow( 1.0 / ( 1.0 - precision_multiplier ), 0.1 );
@@ -152,7 +158,7 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision, mode )
 		time_WR = leaderboard[1];
 
 	// make sure people with same time are counted as having the same position
-	for ( local i = 1, cur_pos = 1; i < lb_length; i += 2, ++cur_pos )
+	for ( local i = 1, cur_pos = 1; i < lb_length; i += 3, ++cur_pos )
 	{
 		if ( i == 1 )
 		{
@@ -160,33 +166,34 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision, mode )
 			continue;
 		}
 
-		if ( leaderboard[i] == leaderboard[i - 2] )
+		if ( leaderboard[i] == leaderboard[i - 3] )
 			--cur_pos;
 
 		lb_positions.push( cur_pos );
 	}
 	
-	for ( local i = 0; i < lb_length; i += 2 )
+	for ( local i = 0; i < lb_length; i += 3 )
 	{
 		local points = 0;
-		local reltime = !i && lb_length > 2 ? leaderboard[3] / time_WR : time_WR / leaderboard[i+1];
+		local reltime = !i && lb_length > 3 ? leaderboard[4] / time_WR : time_WR / leaderboard[i+1];
 		reltime = pow( reltime, pos_reltime_relevance );
 
 		// dont get too crazy now
 		if ( reltime > reltime_overload )
 			reltime = reltime_overload;
 
-		points = map_rating_advanced * pow( reltime, pos_reltime_relevance ) * pow( precision_multiplier, pow( lb_positions[i/2] - 1, pos_reltime_relevance ) );
+		points = map_rating_advanced * pow( reltime, pos_reltime_relevance ) * pow( precision_multiplier, pow( lb_positions[i/3] - 1, pos_reltime_relevance ) );
 		if ( points < map_rating )
 			points = map_rating;
 
 		lb_points.push( points );
 	}
 
-	for ( local i = 0, j = 0; i < lb_length; i += 2, ++j )
+	for ( local i = 0, j = 0; i < lb_length; i += 3, ++j )
 	{
 		output.push( leaderboard[i] );
 		output.push( leaderboard[i+1] );
+		output.push( leaderboard[i+2] );
 		output.push( lb_points[j] );
 	}
 
@@ -318,4 +325,22 @@ function CalculatePlayersChallengePoints( steamid, mode )
 	local maps_nfngl = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_nf+ngl" ), "|" ) );
 
 	return g_bonus_points_per_challenge * ( maps_nohit.len() + maps_nfngl.len() );
+}
+
+// 1087987987|129.783|780.246|
+// 1087987987|129.783|780.246|20220728|
+function AddDate( mode, map, _date, leaderboard = [] )
+{
+	if ( leaderboard.len() == 0 )
+		leaderboard = CleanList( split( FileToString( "r_" + mode + "_leaderboard_" + map ), "|" ) );
+
+	if ( leaderboard.len() == 0 )
+		return;
+
+	local leaderboard_length = leaderboard.len();
+	for ( local i = leaderboard_length - 2; i > 0; i -= 3 )
+		leaderboard.insert( i + 1, _date );
+
+	WriteFile( "r_" + mode + "_leaderboard_" + map, leaderboard, "|", 4, "" );
+	return leaderboard;
 }

@@ -31,6 +31,20 @@ function GetCurrentMapInfo()
 	}
 }
 
+// turns a string like "20220727" into "27 JUL 2022"
+function ReinterpretDate( _date )
+{
+	_date = _date.tointeger();
+	
+	local months_list = [" JAN ", " FEB ", " MAR ", " APR ", " MAY ", " JUN ", " JUL ", " AUG ", " SEP ", " OCT ", " NOV ", " DEC "];
+
+	local str_year = ( _date / 10000 ).tostring();
+	local int_month = _date / 100 % 100
+	local str_day = ( _date % 100 ).tostring();
+
+	return str_day + months_list[ int_month - 1 ] + str_year;
+}
+
 // broadcast a message to other servers. second parameter true means map name and game mode will be included in the beginning of the message
 // important: if broadcasting trying to broadcast couple messages at the same time, only the last one will be broadcasted. (0.1 second update for broadcasting).
 // todo: add a message queue to support multiple message broadcasts at same time? or some hack to parse multiple messages as one
@@ -131,6 +145,57 @@ function SortArray2( _array, bDescending = true )
                     _array[i+1] = _array[j+1];
                     _array[j+1] = _value;
                     _value = _array[i+1].tofloat();
+                }
+            }
+		}
+	}
+}
+
+// nubic selection sort, an array with increment 2
+function SortArray3( _array, bDescending = true )
+{
+    local length = _array.len();
+    
+    for ( local i = 0; i < length - 3; i += 3 )	
+	{
+		local _string = _array[i];
+		local _value = _array[i+1].tofloat();
+		local _date = _array[i+2];
+
+		for ( local j = i + 3; j < length; j += 3 )
+		{
+			if ( bDescending )
+            {
+                if ( _value < _array[j+1].tofloat() )
+                {
+                    _array[i] = _array[j];
+                    _array[j] = _string;
+                    _string = _array[i];
+
+                    _array[i+1] = _array[j+1];
+                    _array[j+1] = _value;
+                    _value = _array[i+1].tofloat();
+
+					_array[i+2] = _array[j+2];
+					_array[j+2] = _date;
+					_date = _array[i+2];
+                }
+            }
+            else
+            {
+                if ( _value > _array[j+1].tofloat() )
+                {
+                    _array[i] = _array[j];
+                    _array[j] = _string;
+                    _string = _array[i];
+
+                    _array[i+1] = _array[j+1];
+                    _array[j+1] = _value;
+                    _value = _array[i+1].tofloat();
+					
+					_array[i+2] = _array[j+2];
+					_array[j+2] = _date;
+					_date = _array[i+2];
                 }
             }
 		}
