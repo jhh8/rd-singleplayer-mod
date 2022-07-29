@@ -326,21 +326,3 @@ function CalculatePlayersChallengePoints( steamid, mode )
 
 	return g_bonus_points_per_challenge * ( maps_nohit.len() + maps_nfngl.len() );
 }
-
-// 1087987987|129.783|780.246|
-// 1087987987|129.783|780.246|20220728|
-function AddDate( mode, map, _date, leaderboard = [] )
-{
-	if ( leaderboard.len() == 0 )
-		leaderboard = CleanList( split( FileToString( "r_" + mode + "_leaderboard_" + map ), "|" ) );
-
-	if ( leaderboard.len() == 0 )
-		return;
-
-	local leaderboard_length = leaderboard.len();
-	for ( local i = leaderboard_length - 2; i > 0; i -= 3 )
-		leaderboard.insert( i + 1, _date );
-
-	WriteFile( "r_" + mode + "_leaderboard_" + map, leaderboard, "|", 4, "" );
-	return leaderboard;
-}

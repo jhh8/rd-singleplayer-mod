@@ -202,56 +202,6 @@ function OnGameEvent_player_say( params )
 			}
 		}
 
-		if ( argv[1].tolower() == "setdates" )
-		{
-			if ( argv[2].tolower() == "relaxed" )
-			{
-				maps_info <- CleanList( split( FileToString( "r_rs_mapratings" ), "|" ) );
-
-				if ( maps_info.len() == 0 )
-					return;
-
-				maps_info.remove( 0 );	// remove the comment
-
-				if ( !ValidArray( maps_info, 4 ) )
-				{
-					LogError( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring(), argv[2] );
-					return;
-				}
-				
-				local delay_per_map = 0.02;	// bypass SQQuerySuspend
-				PrintToChat( "Process will take " + ( maps_info.len() * delay_per_map / 4.0 ).tostring() + " seconds, please do not interrupt the process." );
-				for ( local i = 0; i < maps_info.len(); i += 4 )
-					DelayCodeExecution( "::AddDate( \"rs\", maps_info[" + i.tostring() + "], \"20220727\")", ( delay_per_map * i / 4.0 ), "worldspawn" );
-
-				// we cant really figure out if the process was successfull or not
-				DelayCodeExecution( "::PrintToChat( COLOR_GREEN + \"Process ended.\" )", ( maps_info.len() * delay_per_map / 4.0 ), "worldspawn" );
-			}
-			else if ( argv[2].tolower() == "hardcore" )
-			{
-				maps_info <- CleanList( split( FileToString( "r_hs_mapratings" ), "|" ) );
-
-				if ( maps_info.len() == 0 )
-					return;
-
-				maps_info.remove( 0 );	// remove the comment
-
-				if ( !ValidArray( maps_info, 4 ) )
-				{
-					LogError( COLOR_RED + "Internal ERROR: MapSpawn: maps_info array has invalid length = " + maps_info.len().tostring(), argv[2] );
-					return;
-				}
-
-				local delay_per_map = 0.02;	// bypass SQQuerySuspend
-				PrintToChat( "Process will take " + ( maps_info.len() * delay_per_map / 4.0 ).tostring() + " seconds, please do not interrupt the process." );
-				for ( local i = 0; i < maps_info.len(); i += 4 )
-					DelayCodeExecution( "::AddDate( \"hs\", maps_info[" + i.tostring() + "], \"20220727\")", ( delay_per_map * i / 4.0 ), "worldspawn" );
-
-				// we cant really figure out if the process was successfull or not
-				DelayCodeExecution( "::PrintToChat( COLOR_GREEN + \"Process ended.\" )", ( maps_info.len() * delay_per_map / 4.0 ), "worldspawn" );
-			}
-		}
-
 		if ( argv[1].tolower() == "run_code" )
 		{
 			local command = "";
