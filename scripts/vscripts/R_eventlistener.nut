@@ -3,7 +3,7 @@ IncludeScript( "R_useful_funcs.nut" );
 g_tActivePlayersList <- [];  // list of player names which are currently on the server
 const MAP_CHANGE_PLAYER_JOIN_TIME = 10.0;
 const THINK_TIME = 0.1;
-const LOG_ACTIVITY = 0;
+const LOG_ACTIVITY = 1;
 
 function SetupEventListener()
 {   
@@ -83,11 +83,13 @@ function Event_player_left( nPlayer )
 
 function Event_new_map()
 {
-    if ( !Entities.FindByClassname( null, "player" ) )
+    if ( !CleanList( split( FileToString( "r_activeplayerlist" + g_strServerNumber ), "|" ) ).len() )
         return;
     
     if ( LOG_ACTIVITY )
         LogActivity( "Map changed to " + g_strCurMap );
 
     BroadcastMessage( COLOR_YELLOW + "Map changed to " + g_strCurMap, false, true );
+
+    StringToFile( "r_activemap" + g_strServerNumber, g_strCurMap );
 }

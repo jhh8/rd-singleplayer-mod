@@ -329,6 +329,7 @@ function OnGameEvent_player_say( params )
 				PrintToChat( COLOR_GREEN + "- /r points" + COLOR_BLUE + " - prints current challenge's points leaderboard" );
 				PrintToChat( COLOR_GREEN + "- /r profile" + COLOR_BLUE + " - prints your current challenge's general profile" );
 				PrintToChat( COLOR_GREEN + "- /r welcome " + COLOR_YELLOW + "[yes/no]" + COLOR_BLUE + " - disable/enable welcome message for yourself" );
+				PrintToChat( COLOR_GREEN + "- /r who " + COLOR_YELLOW + "[server number]" + COLOR_BLUE + " - check what players are playing on which server" );
 				return;
 			}
 			case "adminhelp":
@@ -513,6 +514,30 @@ function OnGameEvent_player_say( params )
 					else
 						PrintToChat( COLOR_BLUE + (i / 2 + 1).tostring() + ": " + ( ( i / 2 + 1 ) == 10 ? "" : " " ) + leaderboard[i] + spaces + " - " + COLOR_GREEN + leaderboard[i+1].tostring() );
 				}
+
+				return;
+			}
+			case "who":
+			{
+				ActivePlayersList <- CleanList( split( FileToString( "r_activeplayerlist" + argv[2] ), "|" ) );
+				if ( !ActivePlayersList.len() )
+				{
+					PrintToChat( COLOR_BLUE + "Empty server." );
+					return;
+				}
+
+				local compiled_string = COLOR_BLUE + "Players on server #" + COLOR_GREEN + argv[2] + COLOR_BLUE + ": " + COLOR_GREEN;
+				for( local i = 0; i < ActivePlayersList.len(); ++i )
+				{
+					compiled_string += ActivePlayersList[i];
+
+					if ( i + 1 < ActivePlayersList.len() )
+						compiled_string += COLOR_BLUE + ", " + COLOR_GREEN;
+				}
+
+				compiled_string += COLOR_BLUE + " on map " + COLOR_GREEN + FileToString( "r_activemap" + argv[2] );
+
+				PrintToChat( compiled_string );
 
 				return;
 			}

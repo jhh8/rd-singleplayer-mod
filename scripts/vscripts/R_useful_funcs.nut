@@ -340,10 +340,10 @@ function LogActivity( str_activity )
 	local time_table = {};
 	LocalTime( time_table );
 
-	local _date = time_table["year"].tostring() + ( time_table["month"] / 10 ).tostring() + ( time_table["month"] % 10 ).tostring() + ( time_table["day"] / 10 ).tostring() + ( time_table["day"] % 10 ).tostring() + "_" + ( time_table["hour"] / 10 ).tostring() + ( time_table["hour"] % 10 ).tostring() + ":" + ( time_table["minute"] / 10 ).tostring() + ( time_table["minute"] % 10 ).tostring() + ":" + ( time_table["second"] / 10 ).tostring() + ( time_table["second"] % 10 ).tostring() + " - ";
+	local _date = ( time_table["day"] / 10 ).tostring() + ( time_table["day"] % 10 ).tostring() + "_" + ( time_table["hour"] / 10 ).tostring() + ( time_table["hour"] % 10 ).tostring() + ":" + ( time_table["minute"] / 10 ).tostring() + ( time_table["minute"] % 10 ).tostring() + ":" + ( time_table["second"] / 10 ).tostring() + ( time_table["second"] % 10 ).tostring() + " - ";
 	
 	local activity_list = CleanList( split( FileToString( "r_activitylog" ), "|" ) );
-	activity_list.push( "[Server " + g_strServerNumber + "] " + _date + str_activity );
+	activity_list.push( "[" + g_strServerNumber + "]" + _date + str_activity );
 
 	WriteFile( "r_activitylog", activity_list, "|", 1, "" );
 }
