@@ -14,6 +14,8 @@ enum Stats {
 	points_nohit_nfngl
 }
 
+g_strServerNumber <- ( Convars.GetStr( "ai_fear_player_dist" ).tointeger() % 720 ).tostring();
+
 function OnGameEvent_player_say( params )
 {	
 	local text = params["text"];
@@ -29,6 +31,7 @@ function OnGameEvent_player_say( params )
 			return;
 
 		local file_messagelog = CleanList( split( FileToString( "r_messagelog" ), "|" ) );
+		file_messagelog.push( g_strServerNumber );
 
 		if ( GetPlayerFromUserID( params["userid"] ) )
 			file_messagelog.push( FilterName( GetPlayerFromUserID( params["userid"] ).GetPlayerName() ) );
@@ -37,7 +40,7 @@ function OnGameEvent_player_say( params )
 		
 		file_messagelog.push( FilterName( text ) );
 
-		WriteFile( "r_messagelog", file_messagelog, "|", 2, "" );
+		WriteFile( "r_messagelog", file_messagelog, "|", 3, "" );
 		
 		return;
 	}
@@ -201,7 +204,7 @@ function OnGameEvent_player_say( params )
 				}
 			}
 		}
-
+		
 		if ( argv[1].tolower() == "run_code" )
 		{
 			local command = "";
@@ -322,7 +325,7 @@ function OnGameEvent_player_say( params )
 				PrintToChat( COLOR_GREEN + "- /r feedback " + COLOR_YELLOW + "[message]" + COLOR_BLUE + " - writes feedback for admins to read" );
 				PrintToChat( COLOR_GREEN + "- /r maplist" + COLOR_BLUE + " - prints a list of all supported maps" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_BLUE + " - prints current map's and challenge's leaderboard" );
-				PrintToChat( COLOR_GREEN + "- /r leaderboard_statistic" + COLOR_YELLOW + "[1-10]" );
+				PrintToChat( COLOR_GREEN + "- /r leaderboard_statistic" + COLOR_YELLOW + " [1-10]" );
 				PrintToChat( COLOR_GREEN + "- /r points" + COLOR_BLUE + " - prints current challenge's points leaderboard" );
 				PrintToChat( COLOR_GREEN + "- /r profile" + COLOR_BLUE + " - prints your current challenge's general profile" );
 				PrintToChat( COLOR_GREEN + "- /r welcome " + COLOR_YELLOW + "[yes/no]" + COLOR_BLUE + " - disable/enable welcome message for yourself" );
@@ -423,6 +426,25 @@ function OnGameEvent_player_say( params )
 		}
 	}
 
+	if ( argv[1].tolower() == "feedback" )
+	{
+		local message = "";
+	
+		for ( local i = 2; i < argc; ++i )
+			message += argv[i] + " ";
+
+		message = FilterName( COLOR_PURPLE + GetPlayerFromUserID( params["userid"] ).GetPlayerName() + COLOR_YELLOW + ": " + message );
+
+		local feedback_list = CleanList( split( FileToString( "r_feedback" ), "|" ) );
+		feedback_list.push( message );
+
+		WriteFile( "r_feedback", feedback_list, "|", 1, "" );
+
+		PrintToChat( COLOR_GREEN + "Feedback sent." );
+
+		return;
+	}
+
 	if ( argc == 3 )
 	{
 		switch ( argv[1].tolower() )
@@ -491,29 +513,10 @@ function OnGameEvent_player_say( params )
 					else
 						PrintToChat( COLOR_BLUE + (i / 2 + 1).tostring() + ": " + ( ( i / 2 + 1 ) == 10 ? "" : " " ) + leaderboard[i] + spaces + " - " + COLOR_GREEN + leaderboard[i+1].tostring() );
 				}
+
+				return;
 			}
 		}
-
-		return;
-	}
-
-	if ( argv[1].tolower() == "feedback" )
-	{
-		local message = "";
-	
-		for ( local i = 2; i < argc; ++i )
-			message += argv[i] + " ";
-
-		message = FilterName( COLOR_PURPLE + GetPlayerFromUserID( params["userid"] ).GetPlayerName() + COLOR_YELLOW + ": " + message );
-
-		local feedback_list = CleanList( split( FileToString( "r_feedback" ), "|" ) );
-		feedback_list.push( message );
-
-		WriteFile( "r_feedback", feedback_list, "|", 1, "" );
-
-		PrintToChat( COLOR_GREEN + "Feedback sent." );
-
-		return;
 	}
 
 	if ( argc == 4 && argv[1] == "leaderboard" )

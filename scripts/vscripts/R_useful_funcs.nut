@@ -1,3 +1,5 @@
+IncludeScript( "R_chatcolors.nut" );
+
 function GetCurrentMapInfo()
 {
 	local FILENAME_MAPSINFO = "r_" + ( IsHardcore() ? "hs" : "rs" ) + "_mapratings";
@@ -45,19 +47,34 @@ function ReinterpretDate( _date )
 	return str_day + months_list[ int_month - 1 ] + str_year;
 }
 
+g_strServerNumber <- ( Convars.GetStr( "ai_fear_player_dist" ).tointeger() % 720 ).tostring();
 // broadcast a message to other servers. second parameter true means map name and game mode will be included in the beginning of the message
-// important: if broadcasting trying to broadcast couple messages at the same time, only the last one will be broadcasted. (0.1 second update for broadcasting).
+// important: if trying to broadcast couple messages at the same time, only the last one will be broadcasted. (0.1 second update for broadcasting).
 // todo: add a message queue to support multiple message broadcasts at same time? or some hack to parse multiple messages as one
-function BroadcastMessage( message, bMissionCompletion = false )
-{
+function BroadcastMessage( message, bMissionCompletion = false, bEventMessage = false )
+{	
 	if ( bMissionCompletion )
 		message = ( COLOR_YELLOW + "MAP " + COLOR_GREEN + g_strCurMap + COLOR_YELLOW + ", MODE " + ( g_strPrefix == "hs" ? ( COLOR_RED + "HARDCORE: " ) : ( COLOR_GREEN + "RELAXED: " ) ) ) + "\n" + message;
 
 	local file_messagelog = CleanList( split( FileToString( "r_messagelog" ), "|" ) );
-	file_messagelog.push( "MessageBroadcast_" + FilterName( g_hPlayer.GetPlayerName() ) );	// someone will use this as their steam name wont they
+	file_messagelog.push( g_strServerNumber );
+
+	if ( !bEventMessage )
+	{
+		file_messagelog.push( "MessageBroadcast_" + FilterName( g_hPlayer.GetPlayerName() ) );
+	}
+	else
+	{
+		local hPlayer = Entities.FindByClassname( null, "player" );
+		if ( hPlayer )
+			file_messagelog.push( "MessageBroadcast_" + FilterName( hPlayer.GetPlayerName() ) );
+		else
+			file_messagelog.push( "MessageBroadcast__" );
+	}
+
 	file_messagelog.push( FilterName( message ) );
 
-	WriteFile( "r_messagelog", file_messagelog, "|", 2, "" );
+	WriteFile( "r_messagelog", file_messagelog, "|", 3, "" );
 }
 
 function IsHardcore()
@@ -202,6 +219,15 @@ function SortArray3( _array, bDescending = true )
 	}
 }
 
+function IsInsideArray( _array, handle )
+{
+	foreach( _handle in _array  )
+		if ( _handle == handle )
+			return true;
+
+	return false;
+}
+
 // remove '|' symbols from player's name or they break the player list file
 function FilterName( name )
 {
@@ -307,6 +333,19 @@ function LogError( str_message, str_info = "" )
 	error_list.push( str_message + " " + str_info );
 
 	WriteFile( "r_errorlog", error_list, "|", 1, "" );
+}
+
+function LogActivity( str_activity )
+{
+	local time_table = {};
+	LocalTime( time_table );
+
+	local _date = time_table["year"].tostring() + ( time_table["month"] / 10 ).tostring() + ( time_table["month"] % 10 ).tostring() + ( time_table["day"] / 10 ).tostring() + ( time_table["day"] % 10 ).tostring() + "_" + ( time_table["hour"] / 10 ).tostring() + ( time_table["hour"] % 10 ).tostring() + ":" + ( time_table["minute"] / 10 ).tostring() + ( time_table["minute"] % 10 ).tostring() + ":" + ( time_table["second"] / 10 ).tostring() + ( time_table["second"] % 10 ).tostring() + " - ";
+	
+	local activity_list = CleanList( split( FileToString( "r_activitylog" ), "|" ) );
+	activity_list.push( "[Server " + g_strServerNumber + "] " + _date + str_activity );
+
+	WriteFile( "r_activitylog", activity_list, "|", 1, "" );
 }
 
 function PrintToChat( str_message )

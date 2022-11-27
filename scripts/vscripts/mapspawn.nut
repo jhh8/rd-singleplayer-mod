@@ -2,12 +2,14 @@ IncludeScript( "R_useful_funcs.nut" );
 IncludeScript( "R_chatcolors.nut" );
 IncludeScript( "R_leaderboard_logic.nut" );
 IncludeScript( "R_player_say.nut" );
+IncludeScript( "R_eventlistener.nut" );
 
 const FILENAME_PLAYERLIST = "r_playerlist";
 g_tPlayerList <- {};	// player list table. index is steamid, value is player's name
 g_fTotalMapCount <- 0;
 g_bSoloModEnabled <- false;
 g_bFatalError <- false;
+g_strServerNumber <- ( Convars.GetStr( "ai_fear_player_dist" ).tointeger() % 720 ).tostring();
 
 g_strCurMap <- "";
 g_iMapRating <- -1;
@@ -18,6 +20,8 @@ g_bIsMapspawn <- true;
 BuildPlayerList();
 
 GetCurrentMapInfo();
+
+SetupEventListener();
 
 function OnMissionStart()
 {
@@ -60,6 +64,7 @@ function GetPlayerSteamID()
 
 g_strLastMessage <- "";
 g_strLastPlayer <- "";
+g_strLastServer <- "";
 function SetWorldSpawnScope() 
 {
 	local hWorld = Entities.FindByClassname( null, "worldspawn" );
@@ -72,10 +77,14 @@ function SetWorldSpawnScope()
 
 		if ( file_len != 0 )
 		{
+			//if ( file_messagelog[ file_len - 3 ] != g_strServerNumber )
+			//	return ListenForEvents();
+			
 			if ( file_messagelog[ file_len - 1 ] != g_strLastMessage || file_messagelog[ file_len - 2 ] != g_strLastPlayer )
 			{
 				g_strLastMessage <- file_messagelog[ file_len - 1 ];
 				g_strLastPlayer <- file_messagelog[ file_len - 2 ];
+				g_strLastServer <- file_messagelog[ file_len - 3 ];
 				
 				if ( g_strLastPlayer.len() > 16 )
 				{
@@ -87,23 +96,23 @@ function SetWorldSpawnScope()
 						local _hPlayer = null;
 						while ( _hPlayer = Entities.FindByClassname( _hPlayer, "player" ) )
 							if ( FilterName( _hPlayer.GetPlayerName() ) == player_name )
-								return 0.1;
+								return ListenForEvents();
 
-						PrintToChat( g_strLastMessage );
-						return 0.1;
+						PrintToChat( COLOR_YELLOW + "[SERVER #" + COLOR_LIGHTBLUE + g_strLastServer + COLOR_YELLOW + "] " + g_strLastMessage );
+						return ListenForEvents();
 					}
 				}
 
 				local hPlayer = null;
 				while ( hPlayer = Entities.FindByClassname( hPlayer, "player" ) )
 					if ( FilterName( hPlayer.GetPlayerName() ) == g_strLastPlayer )
-						return 0.1;
+						return ListenForEvents();
 
-				PrintToChat( COLOR_PURPLE + g_strLastPlayer + COLOR_LIGHTBLUE + ": " + g_strLastMessage );
+				PrintToChat( COLOR_YELLOW + "[SERVER #" + COLOR_LIGHTBLUE + g_strLastServer + COLOR_YELLOW + "] " + COLOR_PURPLE + g_strLastPlayer + COLOR_LIGHTBLUE + ": " + g_strLastMessage );
 			}
 		}
 
-		return 0.1; 
+		return ListenForEvents(); 
 	}
 
 	scWorld.JH_Update();
