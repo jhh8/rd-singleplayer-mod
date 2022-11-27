@@ -4,6 +4,8 @@ IncludeScript( "R_leaderboard_logic.nut" );
 IncludeScript( "R_player_say.nut" );
 IncludeScript( "R_eventlistener.nut" );
 
+Convars.SetValue( "rd_max_marines", 1 );
+
 const FILENAME_PLAYERLIST = "r_playerlist";
 g_tPlayerList <- {};	// player list table. index is steamid, value is player's name
 g_fTotalMapCount <- 0;
@@ -20,6 +22,7 @@ g_bIsMapspawn <- true;
 BuildPlayerList();
 
 GetCurrentMapInfo();
+StringToFile( "r_activemap" + g_strServerNumber, g_strCurMap );
 
 SetupEventListener();
 

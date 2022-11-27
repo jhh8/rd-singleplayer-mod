@@ -1,24 +1,26 @@
 IncludeScript( "R_useful_funcs.nut" );
 
+g_strActiveChallenge <- "0";
 g_tActivePlayersList <- [];  // list of player names which are currently on the server
 const MAP_CHANGE_PLAYER_JOIN_TIME = 10.0;
+const MAP_CHANGE_CHALLENGE_CHANGE_TIME = 2.0;
 const THINK_TIME = 0.1;
-const LOG_ACTIVITY = 1;
+LOG_ACTIVITY <- 1;
 
 function SetupEventListener()
-{   
+{
     Event_new_map();
     
     local hWorld = Entities.FindByClassname( null, "worldspawn" );
 	hWorld.ValidateScriptScope();
 	local scWorld = hWorld.GetScriptScope();
 	scWorld.ListenForEvents <- function()
-    {   
-        //if ( !Entities.FindByClassname( null, "player" ) )
-        //{
-        //    WriteFile( "r_activeplayerlist" + g_strServerNumber, [], "|", 1, "" );
-        //    return 2.0;
-        //}
+    {        
+        if ( Convars.GetStr( "rd_challenge" ) != g_strActiveChallenge )
+        {
+            g_strActiveChallenge <- Convars.GetStr( "rd_challenge" );
+            Event_new_challenge();
+        }
         
         g_tActivePlayersList <- CleanList( split( FileToString( "r_activeplayerlist" + g_strServerNumber ), "|" ) );
 
@@ -63,19 +65,33 @@ function Event_player_joined( hPlayer )
 {
     g_tActivePlayersList.push( hPlayer.GetPlayerName() );
     BroadcastMessage( COLOR_GREEN + hPlayer.GetPlayerName() + " joined the server.", false, true );
-    
-    if ( LOG_ACTIVITY )
-       LogActivity( hPlayer.GetPlayerName() + " joined the server." );
 
     WriteFile( "r_activeplayerlist" + g_strServerNumber, g_tActivePlayersList, "|", g_tActivePlayersList.len(), "" );
+    
+    local bStopLogs = false;
+    if ( LOG_ACTIVITY )
+       bStopLogs = LogActivity( hPlayer.GetPlayerName() + " joined the server." );
+
+    if ( bStopLogs )
+    {
+        LogActivity( "Stopping log activity. File size close to max" );
+        LOG_ACTIVITY <- 0;
+    }
 }
 
 function Event_player_left( nPlayer )
 {
     BroadcastMessage( COLOR_RED + g_tActivePlayersList[ nPlayer ] + " left the server.", false, true );
-    
+
+    local bStopLogs = false;
     if ( LOG_ACTIVITY )
-      LogActivity( g_tActivePlayersList[ nPlayer ] + " left the server." );
+        bStopLogs = LogActivity( g_tActivePlayersList[ nPlayer ] + " left the server." );
+
+    if ( bStopLogs )
+    {
+        LogActivity( "Stopping log activity. File size close to max" );
+        LOG_ACTIVITY <- 0;
+    }
 
     g_tActivePlayersList.remove( nPlayer );
     WriteFile( "r_activeplayerlist" + g_strServerNumber, g_tActivePlayersList, "|", g_tActivePlayersList.len(), "" );
@@ -85,11 +101,35 @@ function Event_new_map()
 {
     if ( !CleanList( split( FileToString( "r_activeplayerlist" + g_strServerNumber ), "|" ) ).len() )
         return;
-    
-    if ( LOG_ACTIVITY )
-        LogActivity( "Map changed to " + g_strCurMap );
 
     BroadcastMessage( COLOR_YELLOW + "Map changed to " + g_strCurMap, false, true );
 
-    StringToFile( "r_activemap" + g_strServerNumber, g_strCurMap );
+    local bStopLogs = false;
+    if ( LOG_ACTIVITY )
+        bStopLogs = LogActivity( "Map changed to " + g_strCurMap );
+
+    if ( bStopLogs )
+    {
+        LogActivity( "Stopping log activity. File size close to max" );
+        LOG_ACTIVITY <- 0;
+    }
+}
+
+function Event_new_challenge()
+{    
+    if ( Time() < MAP_CHANGE_CHALLENGE_CHANGE_TIME )
+        return;
+    
+    if ( !CleanList( split( FileToString( "r_activeplayerlist" + g_strServerNumber ), "|" ) ).len() )
+        return;
+
+    local bStopLogs = false;
+    if ( LOG_ACTIVITY )
+        bStopLogs = LogActivity( "Challenge changed to " + g_strActiveChallenge );
+
+    if ( bStopLogs )
+    {
+        LogActivity( "Stopping log activity. File size close to max" );
+        LOG_ACTIVITY <- 0;
+    }
 }

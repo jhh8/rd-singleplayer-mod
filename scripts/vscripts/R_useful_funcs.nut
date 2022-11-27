@@ -1,7 +1,7 @@
 IncludeScript( "R_chatcolors.nut" );
 
 function GetCurrentMapInfo()
-{
+{	
 	local FILENAME_MAPSINFO = "r_" + ( IsHardcore() ? "hs" : "rs" ) + "_mapratings";
 	local maps_info = CleanList( split( FileToString( FILENAME_MAPSINFO ), "|" ) );
 
@@ -346,6 +346,8 @@ function LogActivity( str_activity )
 	activity_list.push( "[" + g_strServerNumber + "]" + _date + str_activity );
 
 	WriteFile( "r_activitylog", activity_list, "|", 1, "" );
+
+	return activity_list.len() > 300;
 }
 
 function PrintToChat( str_message )
