@@ -102,7 +102,7 @@ function Event_new_map()
     if ( !CleanList( split( FileToString( "r_activeplayerlist" + g_strServerNumber ), "|" ) ).len() )
         return;
 
-    BroadcastMessage( COLOR_YELLOW + "Map changed to " + g_strCurMap, false, true );
+    BroadcastMessage( COLOR_YELLOW + "Map changed to " + COLOR_GREEN + g_strCurMap, false, true );
 
     local bStopLogs = false;
     if ( LOG_ACTIVITY )

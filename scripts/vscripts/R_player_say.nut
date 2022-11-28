@@ -330,6 +330,7 @@ function OnGameEvent_player_say( params )
 				PrintToChat( COLOR_GREEN + "- /r profile" + COLOR_BLUE + " - prints your current challenge's general profile" );
 				PrintToChat( COLOR_GREEN + "- /r welcome " + COLOR_YELLOW + "[yes/no]" + COLOR_BLUE + " - disable/enable welcome message for yourself" );
 				PrintToChat( COLOR_GREEN + "- /r who " + COLOR_YELLOW + "[server number]" + COLOR_BLUE + " - check what players are playing on which server" );
+				PrintToChat( COLOR_GREEN + "- /r forcevote" + COLOR_BLUE + " - current or next vote will be forced, only lobby leader can type this" );
 				return;
 			}
 			case "adminhelp":
@@ -358,6 +359,9 @@ function OnGameEvent_player_say( params )
 					local color2 = COLOR_BLUE;
 					local spaces = "";
 
+					//local entries_relaxed = -1;
+					//local entries_hardcore = -1;
+
 					if ( map_list[i] == "=" )
 					{
 						color1 = COLOR_YELLOW;
@@ -366,11 +370,17 @@ function OnGameEvent_player_say( params )
 					}
 					else
 					{
+						//entries_relaxed = CleanList( split( FileToString( "r_rs_leaderboard_" + map_list[i] ), "|" ) ).len() / 4;
+						//entries_hardcore = CleanList( split( FileToString( "r_hs_leaderboard_" + map_list[i] ), "|" ) ).len() / 4;
+						
 						for ( local j = 0; j < 7 - map_list[i].len(); ++j )
 							spaces += " ";
 					}
 
-					PrintToChat( color1 + map_list[i] + spaces + color2 + "= " + map_list[i+1] );
+					// too much calculations, would be cool addition if find a way to optimise
+					//local entries_compiled_string = ( entries_relaxed >= 0 ? " [Entries: R:" + COLOR_GREEN + entries_relaxed.tostring() + color2 + " H:" + COLOR_RED + entries_hardcore.tostring() + color2 + "]" : "" );
+
+					PrintToChat( color1 + map_list[i] + spaces + color2 + "= " + map_list[i+1] /*+ entries_compiled_string*/ );
 				}
 				return;
 			}
@@ -423,6 +433,19 @@ function OnGameEvent_player_say( params )
 				
 				argc = 5;
 				break;
+			}
+			case "forcevote":
+			{
+				if ( GetPlayerFromUserID( params["userid"] ) != NetProps.GetPropEntity( Entities.FindByClassname( null, "asw_game_resource" ), "m_Leader" ) )
+				{
+					PrintToChat( COLOR_RED + "Only the lobby leader can execute this command." );
+					return;
+				}
+
+				Convars.SetValue( "asw_vote_map_fraction", 0.01 );
+				PrintToChat( COLOR_GREEN + "Current or next vote will be accepted automatically." );
+				
+				return;
 			}
 		}
 	}

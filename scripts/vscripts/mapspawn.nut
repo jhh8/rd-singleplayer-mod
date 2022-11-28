@@ -5,6 +5,7 @@ IncludeScript( "R_player_say.nut" );
 IncludeScript( "R_eventlistener.nut" );
 
 Convars.SetValue( "rd_max_marines", 1 );
+Convars.SetValue( "asw_vote_map_fraction", 0.6 );
 
 const FILENAME_PLAYERLIST = "r_playerlist";
 g_tPlayerList <- {};	// player list table. index is steamid, value is player's name
