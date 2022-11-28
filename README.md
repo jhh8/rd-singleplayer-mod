@@ -49,3 +49,6 @@ All that information about stats and leaderboards has to be accessed somehow, fo
 - /r leaderboard - prints current map's and challenge's leaderboard
 - /r points - prints current challenge's points leaderboard
 - /r profile - prints your current challenge's general profile
+- /r welcome <yes/no> - disable/enable welcome message for yourself
+- /r who <server number> - check what players are playing on which server
+- /r forcevote - current or next vote will be forced, only lobby leader can type this
