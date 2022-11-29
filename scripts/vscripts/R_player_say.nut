@@ -322,14 +322,14 @@ function OnGameEvent_player_say( params )
 				PrintToChat( COLOR_BLUE + "List of commands:" );
 				PrintToChat( COLOR_GREEN + "- /r profile " + COLOR_YELLOW + "[name/steamid]" + COLOR_RED + " [relaxed/hardcore]" + COLOR_YELLOW + " [general/points/nf+ngl/nohit]" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_RED + " [relaxed/hardcore]" + COLOR_YELLOW + " [mapname/nf+ngl/nohit/points]" + COLOR_RED + " [close/top/full]" );
-				PrintToChat( COLOR_GREEN + "- /r feedback " + COLOR_YELLOW + "[message]" + COLOR_BLUE + " - writes feedback for admins to read" );
+				PrintToChat( COLOR_GREEN + "- /r feedback " + COLOR_YELLOW + "|message|" + COLOR_BLUE + " - writes feedback for admins to read" );
 				PrintToChat( COLOR_GREEN + "- /r maplist" + COLOR_BLUE + " - prints a list of all supported maps" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard" + COLOR_BLUE + " - prints current map's and challenge's leaderboard" );
 				PrintToChat( COLOR_GREEN + "- /r leaderboard_statistic" + COLOR_YELLOW + " [1-10]" );
 				PrintToChat( COLOR_GREEN + "- /r points" + COLOR_BLUE + " - prints current challenge's points leaderboard" );
 				PrintToChat( COLOR_GREEN + "- /r profile" + COLOR_BLUE + " - prints your current challenge's general profile" );
 				PrintToChat( COLOR_GREEN + "- /r welcome " + COLOR_YELLOW + "[yes/no]" + COLOR_BLUE + " - disable/enable welcome message for yourself" );
-				PrintToChat( COLOR_GREEN + "- /r who " + COLOR_YELLOW + "[server number]" + COLOR_BLUE + " - check what players are playing on which server" );
+				PrintToChat( COLOR_GREEN + "- /r who " + COLOR_YELLOW + "|server number|" + COLOR_BLUE + " - check what players are playing on which server" );
 				PrintToChat( COLOR_GREEN + "- /r forcevote" + COLOR_BLUE + " - current or next vote will be forced, only lobby leader can type this" );
 				return;
 			}
