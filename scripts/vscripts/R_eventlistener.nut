@@ -1,6 +1,6 @@
 IncludeScript( "R_useful_funcs.nut" );
 
-g_strActiveChallenge <- "0";
+g_strActiveChallenge <- Convars.GetStr( "rd_challenge" );
 g_tActivePlayersList <- [];  // list of player names which are currently on the server
 const MAP_CHANGE_PLAYER_JOIN_TIME = 10.0;
 const MAP_CHANGE_CHALLENGE_CHANGE_TIME = 2.0;

@@ -110,7 +110,7 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 		
 		// just in case always write points to all players
 		for ( local i = 0; i < output_leaderboard.len(); i += 4 )
-			WritePlayersPoints( output_leaderboard[i], mode, map_name, output_leaderboard[i+3], !!!caller_steamid );
+			DelayCodeExecution( "WritePlayersPoints(\"" + output_leaderboard[i] + "\"," + "\"" + mode + "\"," + "\"" + map_name + "\"," + "\"" + output_leaderboard[i+3] + "\"," + (!!!caller_steamid).tostring() + ")", i * 0.005 );
 
 		if ( caller_steamid )
 		{	
