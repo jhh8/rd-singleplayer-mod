@@ -89,7 +89,7 @@ function OnGameEvent_player_say( params )
 							return;
 						}
 						
-						local delay_per_map = 0.02;	// bypass SQQuerySuspend
+						local delay_per_map = 0.6;	// bypass SQQuerySuspend, the delay has to be huge since each buildleaderboard function call also splits the task into as many tasks as there are players. 0.6 delay is good for leaderboards with <30 players
 						PrintToChat( "Process will take " + ( maps_info.len() * delay_per_map / 4.0 ).tostring() + " seconds, please do not interrupt the process." );
 						for ( local i = 0; i < maps_info.len(); i += 4 )
 							DelayCodeExecution( "::BuildLeaderboard( \"rs\", maps_info[" + i.tostring() + "], maps_info[" + i.tostring() + "+2].tointeger(), maps_info[" + i.tostring() + "+3].tointeger() )", ( delay_per_map * i / 4.0 ), "worldspawn" );
