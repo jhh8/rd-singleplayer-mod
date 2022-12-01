@@ -3,6 +3,8 @@ IncludeScript( "R_chatcolors.nut" );
 IncludeScript( "R_player_say.nut" );
 IncludeScript( "R_leaderboard_logic.nut" );
 
+const g_bonus_points_per_challenge = 7.5;
+
 enum Stats {
 	version,
 	points,
@@ -336,7 +338,8 @@ function OnGameEvent_mission_success( params )
 	local completion_time = TruncateFloat( Time() - g_fTimeStart, 3 );
 	local placements = BuildLeaderboard( g_strPrefix, g_strCurMap, g_iMapRating, g_iMapPrecision, false, [ g_steam_id, completion_time.tostring() ] );
 
-	UpdatePlayerData( 1, placements[1] );
+	// UpdatePlayerData( 1, placements[1] )
+	DelayCodeExecution( "UpdatePlayerData( 1, " + placements[1].tostring() + " )", 0.05 );	// have to delay this because g_stat_prev_points gets calculated correctly with atleast 0.01 delay 
 
 	PrintToChat( COLOR_YELLOW + "MAP " + COLOR_GREEN + g_strCurMap + COLOR_YELLOW + ", MODE " + ( g_strPrefix == "hs" ? ( COLOR_RED + "HARDCORE:" ) : ( COLOR_GREEN + "RELAXED:" ) ) );
 
