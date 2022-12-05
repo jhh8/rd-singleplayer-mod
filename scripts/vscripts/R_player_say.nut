@@ -89,7 +89,7 @@ function OnGameEvent_player_say( params )
 							return;
 						}
 						
-						local delay_per_map = 0.6;	// bypass SQQuerySuspend, the delay has to be huge since each buildleaderboard function call also splits the task into as many tasks as there are players. 0.6 delay is good for leaderboards with <30 players
+						local delay_per_map = 0.1;	// bypass SQQuerySuspend, the delay has to be huge since each buildleaderboard function call also splits the task into as many tasks as there are players. 0.6 delay is good for leaderboards with <30 players
 						PrintToChat( "Process will take " + ( maps_info.len() * delay_per_map / 4.0 ).tostring() + " seconds, please do not interrupt the process." );
 						for ( local i = 0; i < maps_info.len(); i += 4 )
 							DelayCodeExecution( "::BuildLeaderboard( \"rs\", maps_info[" + i.tostring() + "], maps_info[" + i.tostring() + "+2].tointeger(), maps_info[" + i.tostring() + "+3].tointeger() )", ( delay_per_map * i / 4.0 ), "worldspawn" );
@@ -112,7 +112,7 @@ function OnGameEvent_player_say( params )
 							return;
 						}
 
-						local delay_per_map = 0.02;	// bypass SQQuerySuspend
+						local delay_per_map = 0.1;	// bypass SQQuerySuspend
 						PrintToChat( "Process will take " + ( maps_info.len() * delay_per_map / 4.0 ).tostring() + " seconds, please do not interrupt the process." );
 						for ( local i = 0; i < maps_info.len(); i += 4 )
 							DelayCodeExecution( "::BuildLeaderboard( \"hs\", maps_info[" + i.tostring() + "], maps_info[" + i.tostring() + "+2].tointeger(), maps_info[" + i.tostring() + "+3].tointeger() )", ( delay_per_map * i / 4.0 ), "worldspawn" );
@@ -200,6 +200,78 @@ function OnGameEvent_player_say( params )
 						PrintToChat( COLOR_BLUE + i.tostring() + ": " + COLOR_LIGHTBLUE + file_array[i] );
 					}
 
+					return;
+				}
+			}
+		}
+		else if ( argc == 4 )
+		{
+			switch ( argv[1].tolower() )
+			{
+				case "rebuild_leaderboard": 
+				{
+					if ( argv[2].tolower() == "relaxed" )
+					{
+						local mapinfo = CleanList( split( FileToString( "r_rs_mapratings" ), "|" ) );
+
+						if ( mapinfo.len() == 0 )
+							return;
+
+						mapinfo.remove( 0 );	// remove the comment
+
+						if ( !ValidArray( mapinfo, 4 ) )
+						{
+							LogError( COLOR_RED + "Internal ERROR: MapSpawn: mapinfo array has invalid length = " + mapinfo.len().tostring(), argv[1] );
+							return;
+						}
+						
+						local mapname = argv[3].tolower();
+						for ( local i = 0; i < mapinfo.len(); i += 4 )
+						{
+							if ( mapname == mapinfo[i] )
+							{
+								BuildLeaderboard( "rs", mapname, mapinfo[i+2].tointeger(), mapinfo[i+3].tointeger() );
+								PrintToChat( COLOR_GREEN + "Leaderboard for map " + mapname + " rebuilt successfully. " );
+								return;
+							}
+						}
+						
+						PrintToChat( COLOR_RED + "Leaderboard for map " + mapname + " not found." );
+					}
+					else if ( argv[2].tolower() == "hardcore" )
+					{
+						local mapinfo = CleanList( split( FileToString( "r_hs_mapratings" ), "|" ) );
+
+						if ( mapinfo.len() == 0 )
+							return;
+
+						mapinfo.remove( 0 );	// remove the comment
+
+						if ( !ValidArray( mapinfo, 4 ) )
+						{
+							LogError( COLOR_RED + "Internal ERROR: MapSpawn: mapinfo array has invalid length = " + mapinfo.len().tostring(), argv[1] );
+							return;
+						}
+						
+						local mapname = argv[3].tolower();
+						for ( local i = 0; i < mapinfo.len(); i += 4 )
+						{
+							if ( mapname == mapinfo[i] )
+							{
+								BuildLeaderboard( "hs", mapname, mapinfo[i+2].tointeger(), mapinfo[i+3].tointeger() );
+								PrintToChat( COLOR_GREEN + "Leaderboard for map " + mapname + " rebuilt successfully. " );
+								return;
+							}
+						}
+						
+						PrintToChat( COLOR_RED + "Leaderboard for map " + mapname + " not found." );
+					}
+					else
+					{
+						PrintToChat( "Expected argument 2 to be relaxed or hardcore" );
+					}
+					
+					
 					return;
 				}
 			}
@@ -339,6 +411,7 @@ function OnGameEvent_player_say( params )
 				PrintToChat( COLOR_GREEN + "- /r_admin dumprawfile " + COLOR_YELLOW + "|file name|" );
 				PrintToChat( COLOR_GREEN + "- /r_admin edit_file_line " + COLOR_YELLOW + "|file name|" + COLOR_RED + " [insert/remove/edit] " + COLOR_YELLOW + "|line number|" + " |string|" + COLOR_BLUE + " - USE CAREFULLY" );
 				PrintToChat( COLOR_GREEN + "- /r_admin rebuild_all_leaderboards " + COLOR_YELLOW + "[relaxed/hardcore]" + COLOR_BLUE + " - USE CAREFULLY" );
+				PrintToChat( COLOR_GREEN + "- /r_admin rebuild_leaderboard" + COLOR_YELLOW + " [relaxed/hardcore] " + COLOR_RED + "|mapname|" + COLOR_BLUE + " - rebuilds leaderboard for one map" );
 				PrintToChat( COLOR_GREEN + "- /r_admin " + COLOR_YELLOW + "[read/clear]" + COLOR_RED + " [feedback/errorlog]" );
 				return;
 			}
@@ -423,7 +496,11 @@ function OnGameEvent_player_say( params )
 				break;
 			}
 			case "leaderboard":
+			case "lb":
 			{
+				argv.pop();
+				argv.push( "leaderboard" );
+				
 				if ( Convars.GetStr( "rd_challenge" ) == "R_RS" ) argv.push( "RELAXED" );
 				else if ( Convars.GetStr( "rd_challenge" ) == "R_HS" ) argv.push( "HARDCORE" );
 				else return;

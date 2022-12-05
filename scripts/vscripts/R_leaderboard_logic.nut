@@ -109,8 +109,16 @@ function BuildLeaderboard( mode, map_name, map_rating, map_precision, bForceBuil
 		WriteFile( filename, output_leaderboard, "|", 4, "" );
 		
 		// just in case always write points to all players
-		for ( local i = 0; i < output_leaderboard.len(); i += 4 )
-			DelayCodeExecution( "WritePlayersPoints(\"" + output_leaderboard[i] + "\"," + "\"" + mode + "\"," + "\"" + map_name + "\"," + "\"" + output_leaderboard[i+3] + "\"," + (!!!caller_steamid).tostring() + ")", 0.01 );
+		if ( caller_steamid )
+		{
+			for ( local i = 0; i < output_leaderboard.len(); i += 4 )
+				DelayCodeExecution( "WritePlayersPoints(\"" + output_leaderboard[i] + "\"," + "\"" + mode + "\"," + "\"" + map_name + "\"," + "\"" + output_leaderboard[i+3] + "\"," + (!!!caller_steamid).tostring() + ")", 0.01 );
+		}
+		else
+		{
+			for ( local i = 0; i < output_leaderboard.len(); i += 4 )
+				DelayCodeExecution( "WritePlayersPoints(\"" + output_leaderboard[i] + "\"," + "\"" + mode + "\"," + "\"" + map_name + "\"," + "\"" + output_leaderboard[i+3] + "\"," + (!!!caller_steamid).tostring() + ")", 0.01, "worldspawn" );
+		}
 
 		if ( caller_steamid )
 		{	
@@ -201,7 +209,7 @@ function CalculateLeaderboard( leaderboard, map_rating, map_precision, mode )
 }
 
 function WritePlayersPoints( steamid, mode, map_name, points, bAdminCommand = false )
-{
+{	
 	local profile_points = CleanList( split( FileToString( "r_" + mode + "_profile_" + steamid + "_points" ), "|" ) );
 	local profile_length = profile_points.len();
 	
