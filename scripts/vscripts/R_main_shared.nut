@@ -509,6 +509,27 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 		}
 	}
 
+	local hours_played = ( player_profile[ Stats.missiondecims ].tointeger() + g_stat_missiondecims ) / 36000.0;
+
+	if ( hours_played >= 0.5 )
+	{
+		local notwelcome_list = CleanList( split( FileToString( "r_notwelcome" ), "|" ) );
+		local bIsWelcome = true;
+
+		// if already not welcome, dont add to list
+		foreach( index, _player in notwelcome_list )
+			if ( _player == g_steam_id )
+				bIsWelcome = false;
+
+		// they have over 0.5 hours played, theyre not welcome
+		if ( bIsWelcome )
+		{
+			notwelcome_list.push( g_steam_id );
+			WriteFile( "r_notwelcome", notwelcome_list, "|", 1, "" );
+			ClientPrint( g_hPlayer, 3, "You have over 0.5 hours played, disabling the welcome message." );
+		}
+	}
+
 	player_profile[ Stats.killcount ] = ( player_profile[ Stats.killcount ].tointeger() + g_stat_killcount ).tostring();
 	player_profile[ Stats.meleekills ] = ( player_profile[ Stats.meleekills ].tointeger() + g_stat_meleekills ).tostring();
 	player_profile[ Stats.missiondecims ] = ( player_profile[ Stats.missiondecims ].tointeger() + g_stat_missiondecims ).tostring();

@@ -25,6 +25,12 @@ function OnGameEvent_player_say( params )
 	if ( !argc )
 		return;
 
+	if ( text.tolower() == "/help" || text.tolower() == "!help" )
+	{
+		PrintToChat( "Did you mean \"/r help\"?" );
+		return;
+	}
+
 	if ( argv[0].tolower() != "/r" && argv[0].tolower() != "/r_admin" )
 	{
 		if ( !g_bIsMapspawn )
