@@ -442,17 +442,36 @@ function OnGameEvent_player_say( params )
 					return;
 				}
 
+				local rating_list_rs = CleanList( split( FileToString( "r_rs_mapratings" ), "|" ) );
+				local rating_list_hs = CleanList( split( FileToString( "r_hs_mapratings" ), "|" ) );
+
+				rating_table <- {};
+				for ( local i = 1; i < rating_list_rs.len(); i += 4 )
+					rating_table[ rating_list_rs[i] ] <- 10000 * rating_list_rs[i+2].tointeger();
+
+				for ( local i = 1; i < rating_list_hs.len(); i += 4 )
+				{
+					if ( rating_table.rawin( rating_list_hs[i] ) )
+						rating_table[ rating_list_hs[i] ] += rating_list_hs[i+2].tointeger();
+					else
+						rating_table[ rating_list_hs[i] ] <- rating_list_hs[i+2].tointeger();
+				}
+
 				PrintToChat( "Full list of supported maps:" );
 				for ( local i = 0; i < map_list.len(); i += 2 )
 				{
 					local color1 = COLOR_GREEN;
 					local color2 = COLOR_BLUE;
 					local spaces = "";
+					local map_name = map_list[i];
+					local rating_relaxed = 0;
+					local rating_hardcore = 0;
+					local rating_compiled_string = "";
 
 					//local entries_relaxed = -1;
 					//local entries_hardcore = -1;
 
-					if ( map_list[i] == "=" )
+					if ( map_name == "=" )
 					{
 						color1 = COLOR_YELLOW;
 						color2 = COLOR_YELLOW;
@@ -463,14 +482,18 @@ function OnGameEvent_player_say( params )
 						//entries_relaxed = CleanList( split( FileToString( "r_rs_leaderboard_" + map_list[i] ), "|" ) ).len() / 4;
 						//entries_hardcore = CleanList( split( FileToString( "r_hs_leaderboard_" + map_list[i] ), "|" ) ).len() / 4;
 						
-						for ( local j = 0; j < 7 - map_list[i].len(); ++j )
+						for ( local j = 0; j < 7 - map_name.len(); ++j )
 							spaces += " ";
+
+						rating_relaxed = rating_table[ map_name ] / 10000;
+						rating_hardcore = rating_table[ map_name ] % 10000;
+						rating_compiled_string += COLOR_YELLOW + " (Difficulty Rating: " + ( rating_relaxed ? COLOR_GREEN + rating_relaxed.tostring() + ( rating_hardcore ? COLOR_YELLOW + ", " : "" ) : "" ) + ( rating_hardcore ? COLOR_RED + rating_hardcore.tostring() : "" ) + COLOR_YELLOW + ")";
 					}
 
 					// too much calculations, would be cool addition if find a way to optimise
 					//local entries_compiled_string = ( entries_relaxed >= 0 ? " [Entries: R:" + COLOR_GREEN + entries_relaxed.tostring() + color2 + " H:" + COLOR_RED + entries_hardcore.tostring() + color2 + "]" : "" );
 
-					PrintToChat( color1 + map_list[i] + spaces + color2 + "= " + map_list[i+1] /*+ entries_compiled_string*/ );
+					PrintToChat( color1 + map_name + spaces + color2 + "= " + map_list[i+1] + rating_compiled_string /*+ entries_compiled_string*/ );
 				}
 				return;
 			}
