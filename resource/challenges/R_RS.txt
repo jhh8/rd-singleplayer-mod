@@ -3,6 +3,11 @@
 	"description"	""
 
 	"convars" {
+		"asw_marine_speed_scale_easy"		"1.048"
+		"asw_marine_speed_scale_normal"		"1.048"
+		"asw_marine_speed_scale_hard"		"1.048"
+		"asw_marine_speed_scale_insane"		"1.048"
+		
 		"asw_simple_hacking"				"1"
 		"asw_ai_computer_hacking_scale"		"10"
 		"asw_ai_button_hacking_scale"		"10"
