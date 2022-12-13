@@ -37,6 +37,13 @@ function OnGameEvent_player_say( params )
 			return;
 
 		local file_messagelog = CleanList( split( FileToString( "r_messagelog" ), "|" ) );
+		
+		if ( file_messagelog.len() > 600 )	// clear message log
+		{
+			WriteFile( "r_messagelog", [], "|", 2, "" );
+			file_messagelog = [];
+		}
+		
 		file_messagelog.push( g_strServerNumber );
 
 		if ( GetPlayerFromUserID( params["userid"] ) )

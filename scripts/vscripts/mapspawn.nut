@@ -124,15 +124,3 @@ function SetWorldSpawnScope()
 }
 
 SetWorldSpawnScope();
-
-function OnGameEvent_mission_failed( params )
-{
-	// clear message log
-	WriteFile( "r_messagelog", [], "|", 2, "" );
-}
-
-function OnGameEvent_mission_success( params )
-{
-	// clear message log
-	WriteFile( "r_messagelog", [], "|", 2, "" );
-}
