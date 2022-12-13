@@ -2,7 +2,7 @@ IncludeScript( "R_useful_funcs.nut" );
 
 g_strActiveChallenge <- Convars.GetStr( "rd_challenge" );
 g_tActivePlayersList <- [];  // list of player names which are currently on the server
-const MAP_CHANGE_PLAYER_JOIN_TIME = 10.0;
+const MAP_CHANGE_PLAYER_JOIN_TIME = 10.0;	// this must be lower than sv_hibernate_postgame_delay!!!
 const MAP_CHANGE_CHALLENGE_CHANGE_TIME = 2.0;
 const THINK_TIME = 0.1;
 LOG_ACTIVITY <- 1;
@@ -99,8 +99,17 @@ function Event_player_left( nPlayer )
 
 function Event_new_map()
 {
-    if ( !CleanList( split( FileToString( "r_activeplayerlist" + g_strServerNumber ), "|" ) ).len() )
+    local active_player_list = CleanList( split( FileToString( "r_activeplayerlist" + g_strServerNumber ), "|" ) );
+	
+	if ( !active_player_list.len() )
         return;
+		
+	if ( GetMapName() == "lobby" )	// server actually has no players but activeplayerlist is not empty. server crashed
+	{
+		BroadcastMessage( COLOR_RED + "Server crashed! :(", false, true );
+		StringToFile( "r_activeplayerlist" + g_strServerNumber, "eof" );
+		return;
+	}
 
     BroadcastMessage( COLOR_YELLOW + "Map changed to " + COLOR_GREEN + ( g_strCurMap != "" ? g_strCurMap : "<unknown>" ), false, true );
 
