@@ -45,5 +45,10 @@
 		"rd_weapons_extra_allowed_inverted" "1"
 		"rd_weapons_extra_class_unrestricted" 	"11 17"
 		"rd_weapons_regular_class_unrestricted" "1 2 3 6 11 15 22 24 26"
+		
+		"asw_queen_health_easy" 		"6000"
+		"asw_queen_health_normal" 		"6000"
+		"asw_queen_health_hard" 		"6000"
+		"asw_queen_health_insane" 		"6000"
 	}
 }
