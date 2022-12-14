@@ -51,7 +51,7 @@ g_strServerNumber <- ( Convars.GetStr( "ai_fear_player_dist" ).tointeger() % 720
 // broadcast a message to other servers. second parameter true means map name and game mode will be included in the beginning of the message
 // important: if trying to broadcast couple messages at the same time, only the last one will be broadcasted. (0.1 second update for broadcasting).
 // todo: add a message queue to support multiple message broadcasts at same time? or some hack to parse multiple messages as one
-function BroadcastMessage( message, bMissionCompletion = false, bEventMessage = false )
+function BroadcastMessage( message, bMissionCompletion = false, bEventMessage = false, bEventPlayerLeft = false )
 {	
 	if ( bMissionCompletion )
 		message = ( COLOR_YELLOW + "MAP " + COLOR_GREEN + g_strCurMap + COLOR_YELLOW + ", MODE " + ( g_strPrefix == "hs" ? ( COLOR_RED + "HARDCORE: " ) : ( COLOR_GREEN + "RELAXED: " ) ) ) + "\n" + message;
@@ -66,7 +66,7 @@ function BroadcastMessage( message, bMissionCompletion = false, bEventMessage = 
 	else
 	{
 		local hPlayer = Entities.FindByClassname( null, "player" );
-		if ( hPlayer )
+		if ( hPlayer && !bEventPlayerLeft )
 			file_messagelog.push( "MessageBroadcast_" + FilterName( hPlayer.GetPlayerName() ) );
 		else
 			file_messagelog.push( "MessageBroadcast__" );

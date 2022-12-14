@@ -496,7 +496,7 @@ function UpdatePlayerData( iMissionComplete, new_placement )
 
 	if ( g_bPointsChanged )
 	{
-		if ( g_stat_prev_points - 0.001 > g_stat_new_points )
+		if ( g_stat_prev_points - 0.01 > g_stat_new_points )
 		{
 			//DelayCodeExecution( "LogError( \"ERROR: Player has lost points after completing the map somehow (\" + g_stat_prev_points.tostring() + \" -> \" + g_stat_new_points + \") not changing points.\", g_steam_id );", 0.02 );
 			LogError( "", "Player " + g_steam_id + " points were calculated wrong somewhere, " + g_stat_prev_points.tostring() + " -> " + g_stat_new_points.tostring() );

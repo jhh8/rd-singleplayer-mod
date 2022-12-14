@@ -81,7 +81,7 @@ function Event_player_joined( hPlayer )
 
 function Event_player_left( nPlayer )
 {
-    BroadcastMessage( COLOR_RED + g_tActivePlayersList[ nPlayer ] + " left the server.", false, true );
+    BroadcastMessage( COLOR_RED + g_tActivePlayersList[ nPlayer ] + " left the server.", false, true, true );
 
     local bStopLogs = false;
     if ( LOG_ACTIVITY )
