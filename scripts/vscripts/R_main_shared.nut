@@ -62,7 +62,7 @@ g_tPlayerList <- {};	// player list table. index is steamid, value is player's n
 g_fTotalMapCount <- 0;
 
 function OnMissionStart()
-{
+{	
 	local player_list = CleanList( split( FileToString( FILENAME_PLAYERLIST ), "|" ) );
 
 	if ( !ValidArray( player_list, 2 ) )
@@ -255,7 +255,7 @@ function Update()
 	if ( !g_hMarine.IsValid() )
 		return 0.5;
 	
-	if ( !g_hPlayer || g_hPlayer != g_hMarine.GetCommander() )
+	if ( !g_hPlayer || g_hPlayer != g_hMarine.GetCommander() || !g_hMarine.IsInhabited() )
 	{
 		PrintToChat( COLOR_RED + "Run is invalid! Initial player stopped playing. This run will not count any stats" );
 		g_bInvalidRun <- true;

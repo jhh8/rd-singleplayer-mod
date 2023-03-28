@@ -4,7 +4,7 @@ IncludeScript( "R_leaderboard_logic.nut" );
 IncludeScript( "R_player_say.nut" );
 IncludeScript( "R_eventlistener.nut" );
 
-Convars.SetValue( "rd_max_marines", 1 );
+//Convars.SetValue( "rd_max_marines", 1 );
 Convars.SetValue( "asw_vote_map_fraction", 0.6 );
 
 const FILENAME_PLAYERLIST = "r_playerlist";
@@ -54,7 +54,7 @@ function OnMissionStart()
 		if ( !bNotWelcome )
 		{
 			ClientPrint( hPlayer, 3, COLOR_PURPLE + "Welcome to singleplayer mod!" );
-			ClientPrint( hPlayer, 3, COLOR_BLUE + "Play the challenges called " + COLOR_GREEN + "Ranked Relaxed Solo" + COLOR_BLUE + " or " + COLOR_GREEN + "Ranked Hardcore Solo" + COLOR_BLUE + " to gain points and compete with other players!" );
+			ClientPrint( hPlayer, 3, COLOR_BLUE + "Play the challenges called " + COLOR_GREEN + "Ranked Relaxed Solo" + COLOR_BLUE + " or " + COLOR_RED + "Ranked Hardcore Solo" + COLOR_BLUE + " to gain points and compete with other players!" );
 			ClientPrint( hPlayer, 3, COLOR_BLUE + "Type " + COLOR_GREEN + "/r help" + COLOR_BLUE + " for some useful chat commands" );
 			ClientPrint( hPlayer, 3, COLOR_PURPLE + "More information on https://github.com/jhh8/rd-singleplayer-mod" );
 		}
