@@ -1,0 +1,1 @@
+this is all the data of records and stats that got collected of players from playing on singleplayer mod servers hosted by me throughout 2022, if youre planning to host a server with this mod then you can choose to have this old data of player's records and stats in your server, by putting everything that is in this folder into your server's save/vscripts folder
